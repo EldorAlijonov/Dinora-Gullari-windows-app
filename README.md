@@ -1,0 +1,1 @@
+# Dinora-Gullari-app
