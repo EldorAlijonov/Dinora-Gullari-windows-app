@@ -1,0 +1,95 @@
+{
+  "name": "dinora-gullari-windows",
+  "version": "1.0.0",
+  "description": "Dinora Gullari lokal Windows desktop dasturi.",
+  "author": "Eldor Alijonov",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EldorAlijonov/Dinora-Gullari-windows-app.git"
+  },
+  "main": "electron/main.cjs",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "runtime:node": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-runtime-node.ps1",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "cross-env VITE_DESKTOP=true VITE_API_URL=http://127.0.0.1:5000 npm --prefix frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "desktop": "npm run build && electron .",
+    "dist:win": "npm run runtime:node && npm run build && npm --prefix backend prune --omit=dev && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= CSC_LINK= electron-builder --win nsis --x64 --publish never",
+    "publish:win": "npm run runtime:node && npm run build && npm --prefix backend prune --omit=dev && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= CSC_LINK= electron-builder --win nsis --x64 --publish always"
+  },
+  "build": {
+    "appId": "uz.dinora.gullari.desktop",
+    "productName": "Dinora Gullari",
+    "compression": "normal",
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "EldorAlijonov",
+        "repo": "Dinora-Gullari-windows-app",
+        "releaseType": "release"
+      }
+    ],
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "runtime/node.exe",
+        "to": "runtime/node.exe"
+      },
+      {
+        "from": "backend/dist",
+        "to": "backend/dist"
+      },
+      {
+        "from": "backend/node_modules",
+        "to": "backend/node_modules"
+      },
+      {
+        "from": "backend/package.json",
+        "to": "backend/package.json"
+      },
+      {
+        "from": "frontend/dist",
+        "to": "frontend/dist"
+      }
+    ],
+    "win": {
+      "signExecutable": false,
+      "verifyUpdateCodeSignature": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "DinoraGullari-Setup-x64.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dinora Gullari",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}

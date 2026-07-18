@@ -1,0 +1,27 @@
+# Dependencies
+/node_modules/
+**/node_modules/
+
+# Generated builds
+/release/
+/dist/
+**/dist/
+/runtime/node.exe
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local logs/data
+*.log
+*.tsbuildinfo
+*.sqlite
+*.sqlite-*
+*.db
+/backups/
+/backend/backups/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
