@@ -170,6 +170,7 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
         telegramDebtReminderEnabled INTEGER NOT NULL DEFAULT 1,
         telegramDebtPaymentEnabled INTEGER NOT NULL DEFAULT 1,
         telegramSaleCreatedEnabled INTEGER NOT NULL DEFAULT 1,
+        telegramBotToken TEXT NOT NULL DEFAULT '',
         telegramAdminIds TEXT NOT NULL DEFAULT '[]',
         requirePhoneForDebtSales INTEGER NOT NULL DEFAULT 1,
         debtReminderAfterDays INTEGER NOT NULL DEFAULT 3,
@@ -275,6 +276,11 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS idx_deleted_records_collection ON deleted_records(collectionName);
       CREATE INDEX IF NOT EXISTS idx_deleted_records_deleted_at ON deleted_records(deletedAt);
     `);
+
+    const settingsColumns = this.all<{ name: string }>('PRAGMA table_info(settings);').map((column) => column.name);
+    if (!settingsColumns.includes('telegramBotToken')) {
+      this.database().run("ALTER TABLE settings ADD COLUMN telegramBotToken TEXT NOT NULL DEFAULT '';");
+    }
 
     const now = new Date().toISOString();
     this.database().run(

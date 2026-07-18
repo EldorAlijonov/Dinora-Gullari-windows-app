@@ -11,7 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
-import { useBulkDeleteOrdersMutation, useBulkDeleteSalesMutation, useOrdersQuery, useSalesQuery } from '../services/api';
+import { useBulkDeleteOrdersMutation, useBulkDeleteSalesMutation, useOrdersQuery, useSalesQuery, useSettingsQuery } from '../services/api';
 import { getErrorMessage } from '../utils/errorMessage';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
@@ -93,6 +93,8 @@ export default function ArchivePage() {
   const params = useMemo(() => ({ ...range, search: search || undefined }), [range, search]);
   const orders = useOrdersQuery(params);
   const sales = useSalesQuery(params);
+  const { data: settingsData } = useSettingsQuery();
+  const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
 
   const orderItems = (orders.data || []).map((item) => ({ type: 'order', createdAt: item.createdAt, item }));
   const saleItems = (sales.data || []).map((item) => ({ type: 'sale', createdAt: item.createdAt, item }));
@@ -279,6 +281,7 @@ export default function ArchivePage() {
                   selected={selectedRows.has(rowKey(row))}
                   onToggle={() => toggleRow(rowKey(row))}
                   onView={() => setViewingRow(row)}
+                  telegramEnabled={telegramEnabled}
                 />
               ))}
             </tbody>
@@ -297,16 +300,16 @@ export default function ArchivePage() {
         onConfirm={executeBulkDelete}
       />
 
-      <ArchiveDetailsModal row={viewingRow} onClose={() => setViewingRow(null)} />
+      <ArchiveDetailsModal row={viewingRow} onClose={() => setViewingRow(null)} telegramEnabled={telegramEnabled} />
     </div>
   );
 }
 
-function ArchiveRow({ row, index, selected, onToggle, onView }) {
+function ArchiveRow({ row, index, selected, onToggle, onView, telegramEnabled = false }) {
   const item = row.item;
   const isOrder = row.type === 'order';
   const name = isOrder ? item.customerName : item.customerName || '-';
-  const phone = item.phone || item.telegramPhone || '-';
+  const phone = telegramEnabled ? item.phone || item.telegramPhone || '-' : item.phone || '-';
   const title = isOrder ? item.orderText : item.productName || 'Sovga/tovar';
   const amount = isOrder ? item.totalAmount : item.amount;
   const status = isOrder ? orderStatusLabels[item.status] || item.status : paymentTypeLabels[item.paymentType] || item.paymentType;
@@ -351,7 +354,7 @@ function ArchiveRow({ row, index, selected, onToggle, onView }) {
   );
 }
 
-function ArchiveDetailsModal({ row, onClose }) {
+function ArchiveDetailsModal({ row, onClose, telegramEnabled = false }) {
   const item = row?.item;
   const isOrder = row?.type === 'order';
   const title = isOrder ? 'Gul buyurtmasi tavsilotlari' : "Sovga/tovar sotuv tavsilotlari";
@@ -373,7 +376,7 @@ function ArchiveDetailsModal({ row, onClose }) {
             </span>
           </div>
 
-          {isOrder ? <OrderArchiveDetails item={item} /> : <SaleArchiveDetails item={item} />}
+          {isOrder ? <OrderArchiveDetails item={item} telegramEnabled={telegramEnabled} /> : <SaleArchiveDetails item={item} telegramEnabled={telegramEnabled} />}
 
           <PaymentHistory payments={item.payments || []} />
         </div>
@@ -382,17 +385,17 @@ function ArchiveDetailsModal({ row, onClose }) {
   );
 }
 
-function OrderArchiveDetails({ item }) {
+function OrderArchiveDetails({ item, telegramEnabled = false }) {
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DetailCard icon={UserRound} label="Mijoz" value={item.customerName} copyable />
         <DetailCard icon={Phone} label="Aloqa telefoni" value={item.phone} copyable />
-        <DetailCard icon={Send} label="Telegram telefoni" value={item.telegramPhone || item.phone} copyable />
+        {telegramEnabled && <DetailCard icon={Send} label="Telegram telefoni" value={item.telegramPhone || item.phone} copyable />}
         <DetailCard icon={CalendarClock} label="Yaratilgan sana" value={formatDate(item.createdAt)} />
         <DetailCard icon={CalendarClock} label="Olib ketish sanasi" value={formatDate(item.pickupDate)} />
         <DetailCard icon={CalendarClock} label="Yangilangan sana" value={formatDate(item.updatedAt)} />
-        <DetailCard icon={FileText} label="Telegram xabar" value={item.isTelegramNotified ? 'Yuborilgan' : 'Yuborilmagan'} />
+        {telegramEnabled && <DetailCard icon={FileText} label="Telegram xabar" value={item.isTelegramNotified ? 'Yuborilgan' : 'Yuborilmagan'} />}
         <DetailCard icon={FileText} label="Yozuv ID" value={item._id || item.id} copyable />
       </div>
 
@@ -410,13 +413,13 @@ function OrderArchiveDetails({ item }) {
   );
 }
 
-function SaleArchiveDetails({ item }) {
+function SaleArchiveDetails({ item, telegramEnabled = false }) {
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <DetailCard icon={UserRound} label="Mijoz" value={item.customerName || '-'} copyable />
         <DetailCard icon={Phone} label="Aloqa telefoni" value={item.phone || '-'} copyable />
-        <DetailCard icon={Send} label="Telegram telefoni" value={item.telegramPhone || item.phone || '-'} copyable />
+        {telegramEnabled && <DetailCard icon={Send} label="Telegram telefoni" value={item.telegramPhone || item.phone || '-'} copyable />}
         <DetailCard icon={CalendarClock} label="Yaratilgan sana" value={formatDate(item.createdAt)} />
         <DetailCard icon={CalendarClock} label="Yangilangan sana" value={formatDate(item.updatedAt)} />
         <DetailCard icon={FileText} label="To'lov turi" value={paymentTypeLabels[item.paymentType] || item.paymentType} />

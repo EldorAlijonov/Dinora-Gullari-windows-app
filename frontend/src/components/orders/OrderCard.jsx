@@ -7,7 +7,7 @@ import { CopyableText } from '../ui/CopyableText';
 import { Select } from '../ui/Select';
 import { orderStatuses, StatusBadge } from './StatusBadge';
 
-export function OrderCard({ order, highlighted, onView, onEdit, onDelete, onStatusChange }) {
+export function OrderCard({ order, highlighted, onView, onEdit, onDelete, onStatusChange, telegramEnabled = false }) {
   return (
     <Card className={`cursor-pointer ${highlighted ? 'bg-amber-400/10 ring-1 ring-amber-300/30' : ''}`} onClick={() => onView(order)} title="Buyurtma tavsilotlarini ko'rish">
       <div className="flex items-start justify-between gap-3">
@@ -22,7 +22,7 @@ export function OrderCard({ order, highlighted, onView, onEdit, onDelete, onStat
 
       <div className="mt-4 space-y-2 text-sm text-slate-300">
         <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-sky-300" /> <CopyableText value={order.phone} label="Telefon raqamni nusxalash" /></p>
-        <p className="flex items-center gap-2"><Send className="h-4 w-4 text-emerald-300" /> <CopyableText value={order.telegramPhone || order.phone} label="Telegram raqamni nusxalash" /></p>
+        {telegramEnabled && <p className="flex items-center gap-2"><Send className="h-4 w-4 text-emerald-300" /> <CopyableText value={order.telegramPhone || order.phone} label="Telegram raqamni nusxalash" /></p>}
         <p className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-rose-300" /> {formatDate(order.pickupDate)}</p>
       </div>
 

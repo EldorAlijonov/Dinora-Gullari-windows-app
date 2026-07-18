@@ -7,13 +7,17 @@ import { CopyableText } from '../ui/CopyableText';
 import { Select } from '../ui/Select';
 import { orderStatuses, StatusBadge } from './StatusBadge';
 
-export function OrdersTable({ orders, highlightId, onView, onEdit, onDelete, onStatusChange }) {
+export function OrdersTable({ orders, highlightId, onView, onEdit, onDelete, onStatusChange, telegramEnabled = false }) {
+  const headings = telegramEnabled
+    ? ['#', 'Mijoz', 'Aloqa tel', 'Telegram tel', 'Gul buyurtmasi', 'Summa', 'Qarz', 'Yaratilgan', 'Olib ketish', 'Status', 'Amallar']
+    : ['#', 'Mijoz', 'Aloqa tel', 'Gul buyurtmasi', 'Summa', 'Qarz', 'Yaratilgan', 'Olib ketish', 'Status', 'Amallar'];
+
   return (
     <Card className="overflow-x-auto">
-      <table className="w-full min-w-[1180px] text-left text-sm">
+      <table className={`w-full text-left text-sm ${telegramEnabled ? 'min-w-[1180px]' : 'min-w-[1080px]'}`}>
         <thead className="text-xs uppercase text-slate-500">
           <tr>
-            {['#', 'Mijoz', 'Aloqa tel', 'Telegram tel', 'Gul buyurtmasi', 'Summa', 'Qarz', 'Yaratilgan', 'Olib ketish', 'Status', 'Amallar'].map((heading) => (
+            {headings.map((heading) => (
               <th key={heading} className="px-3 py-3">{heading}</th>
             ))}
           </tr>
@@ -33,9 +37,11 @@ export function OrdersTable({ orders, highlightId, onView, onEdit, onDelete, onS
               <td className="px-3 py-3 text-slate-300">
                 <CopyableText value={order.phone} label="Telefon raqamni nusxalash" />
               </td>
-              <td className="px-3 py-3 text-slate-300">
-                <CopyableText value={order.telegramPhone || order.phone} label="Telegram raqamni nusxalash" />
-              </td>
+              {telegramEnabled && (
+                <td className="px-3 py-3 text-slate-300">
+                  <CopyableText value={order.telegramPhone || order.phone} label="Telegram raqamni nusxalash" />
+                </td>
+              )}
               <td className="max-w-xs px-3 py-3 text-slate-300">{order.orderText}</td>
               <td className="px-3 py-3 text-slate-200">{formatCurrency(order.totalAmount)}</td>
               <td className="px-3 py-3 text-rose-200">{formatCurrency(order.debtAmount)}</td>

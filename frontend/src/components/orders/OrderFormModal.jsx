@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -27,10 +27,17 @@ const phoneField = z
   .min(1, requiredText)
   .regex(/^\d{9}$/, invalidPhoneText);
 
-const schema = z.object({
+const optionalPhoneField = z
+  .string()
+  .optional()
+  .transform((value) => value || '')
+  .refine((value) => !value || /^\d{9}$/.test(value), invalidPhoneText);
+
+function buildSchema(telegramEnabled) {
+  return z.object({
   customerName: z.string({ required_error: requiredText }).trim().min(2, 'Mijoz ismini kiriting'),
   phone: phoneField,
-  telegramPhone: phoneField,
+  telegramPhone: telegramEnabled ? phoneField : optionalPhoneField,
   orderText: z.string({ required_error: requiredText }).trim().min(3, 'Gul buyurtmasi tafsilotini kiriting'),
   totalAmount: numberField,
   prepaidAmount: numberField,
@@ -40,7 +47,8 @@ const schema = z.object({
     .refine((value) => !value || new Date(value).getTime() >= Date.now() - 30_000, pastDateText),
   status: z.string({ required_error: requiredText }).min(1, requiredText),
   note: z.string().optional(),
-});
+  });
+}
 
 function stripPhone(value = '') {
   const digits = value.replace(/\D/g, '');
@@ -79,7 +87,8 @@ function buildDefaults(order) {
   };
 }
 
-export function OrderFormModal({ open, order, loading, onClose, onSubmit }) {
+export function OrderFormModal({ open, order, loading, onClose, onSubmit, telegramEnabled = false }) {
+  const schema = useMemo(() => buildSchema(telegramEnabled), [telegramEnabled]);
   const { register, handleSubmit, reset, formState, setValue, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: buildDefaults(order),
@@ -117,7 +126,7 @@ export function OrderFormModal({ open, order, loading, onClose, onSubmit }) {
       ...values,
       pickupDate: safePickupDate,
       phone: withUzPrefix(values.phone),
-      telegramPhone: withUzPrefix(values.telegramPhone),
+      telegramPhone: telegramEnabled ? withUzPrefix(values.telegramPhone) : '',
       totalAmount: Number(values.totalAmount || 0),
       prepaidAmount: Number(values.prepaidAmount || 0),
     });
@@ -128,7 +137,9 @@ export function OrderFormModal({ open, order, loading, onClose, onSubmit }) {
       <form onSubmit={handleSubmit(submit)} className="grid gap-5 sm:grid-cols-2">
         <Input label="Mijoz ismi" error={formState.errors.customerName?.message} {...register('customerName')} />
         <Input label="Aloqa telefoni" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.phone?.message} {...register('phone')} />
-        <Input label="Telegram telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.telegramPhone?.message} {...register('telegramPhone')} />
+        {telegramEnabled && (
+          <Input label="Telegram telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.telegramPhone?.message} {...register('telegramPhone')} />
+        )}
         <Select label="Status" error={formState.errors.status?.message} {...register('status')}>
           {orderStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Select>

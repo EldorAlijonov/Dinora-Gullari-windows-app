@@ -15,7 +15,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
-import { useDebtsQuery, useDebtsStatsQuery, usePayOrderDebtMutation, usePaySaleDebtMutation, useSendOrderDebtReminderMutation, useSendSaleDebtReminderMutation } from '../services/api';
+import { useDebtsQuery, useDebtsStatsQuery, usePayOrderDebtMutation, usePaySaleDebtMutation, useSendOrderDebtReminderMutation, useSendSaleDebtReminderMutation, useSettingsQuery } from '../services/api';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 
@@ -58,6 +58,8 @@ export default function DebtsPage() {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const { data = [], isLoading, isError, refetch } = useDebtsQuery(params);
   const { data: stats } = useDebtsStatsQuery();
+  const { data: settingsData } = useSettingsQuery();
+  const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
   const [payOrderDebt, orderPayState] = usePayOrderDebtMutation();
   const [paySaleDebt, salePayState] = usePaySaleDebtMutation();
   const [sendReminder] = useSendOrderDebtReminderMutation();
@@ -143,7 +145,7 @@ export default function DebtsPage() {
     }
   };
 
-  const remindableDebts = data.filter((debt) => debt.debtAmount > 0);
+  const remindableDebts = telegramEnabled ? data.filter((debt) => debt.debtAmount > 0) : [];
   const selectedDebts = remindableDebts.filter((debt) => selectedDebtIds.has(debtKey(debt)));
 
   const toggleDebtSelection = (debt) => {
@@ -165,6 +167,7 @@ export default function DebtsPage() {
   };
 
   const openBulkReminder = (mode) => {
+    if (!telegramEnabled) return;
     const debts = mode === 'all' ? remindableDebts : selectedDebts;
     if (debts.length === 0) {
       toast.error(mode === 'all' ? 'Eslatma yuboriladigan aktiv qarzdor yoвЂq' : 'Avval qarzdorlarni tanlang');
@@ -254,7 +257,7 @@ export default function DebtsPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
+        {telegramEnabled && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
           <Button variant="secondary" disabled={remindableDebts.length === 0 || isSendingReminder} onClick={selectAllVisible}>
             Barchasini tanlash
           </Button>
@@ -272,7 +275,7 @@ export default function DebtsPage() {
               Tanlovni tozalash
             </Button>
           )}
-        </div>
+        </div>}
       </Card>
 
       {isLoading ? (
@@ -280,16 +283,16 @@ export default function DebtsPage() {
       ) : data.length === 0 ? (
         <EmptyState title="Qarzdorlik mavjud emas" text="" />
       ) : viewMode === 'table' ? (
-        <DebtsTable debts={data} selectedDebtIds={selectedDebtIds} onToggleSelect={toggleDebtSelection} onView={setViewing} onPay={openPayment} onRemind={remind} navigate={navigate} returnTo={debtsReturnPath} />
+        <DebtsTable debts={data} selectedDebtIds={selectedDebtIds} onToggleSelect={toggleDebtSelection} onView={setViewing} onPay={openPayment} onRemind={remind} navigate={navigate} returnTo={debtsReturnPath} telegramEnabled={telegramEnabled} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((debt, index) => (
-            <DebtCard key={`${debt.debtSource}-${debt._id}`} debt={debt} index={index} selected={selectedDebtIds.has(debtKey(debt))} onToggleSelect={toggleDebtSelection} onView={setViewing} onPay={openPayment} onRemind={remind} navigate={navigate} returnTo={debtsReturnPath} />
+            <DebtCard key={`${debt.debtSource}-${debt._id}`} debt={debt} index={index} selected={selectedDebtIds.has(debtKey(debt))} onToggleSelect={toggleDebtSelection} onView={setViewing} onPay={openPayment} onRemind={remind} navigate={navigate} returnTo={debtsReturnPath} telegramEnabled={telegramEnabled} />
           ))}
         </div>
       )}
 
-      <DebtDetailsModal debt={viewing} onClose={() => setViewing(null)} onPay={openPayment} />
+      <DebtDetailsModal debt={viewing} onClose={() => setViewing(null)} onPay={openPayment} telegramEnabled={telegramEnabled} />
 
       <Modal open={Boolean(paying)} title="Qarzga to‘lov kiritish" onClose={() => setPaying(null)} maxWidth="max-w-md">
         <form onSubmit={form.handleSubmit(submitPayment)} className="space-y-4">
@@ -323,23 +326,23 @@ export default function DebtsPage() {
         onConfirm={confirmPayment}
       />
 
-      <ConfirmModal
+      {telegramEnabled && <ConfirmModal
         open={Boolean(pendingReminder)}
         title="Telegram eslatma yuborish"
         description={`${pendingReminder?.customerName || 'Mijoz'}ga qarzdorlik eslatmasini yuborishni tasdiqlaysizmi?`}
         loading={isSendingReminder}
         onClose={() => setPendingReminder(null)}
         onConfirm={confirmReminder}
-      />
+      />}
 
-      <ConfirmModal
+      {telegramEnabled && <ConfirmModal
         open={Boolean(pendingBulkReminder)}
         title="Telegram eslatmalar yuborish"
         description={`${pendingBulkReminder?.debts?.length || 0} ta qarzdorga qarzdorlik eslatmasini yuborishni tasdiqlaysizmi?`}
         loading={isSendingReminder}
         onClose={() => setPendingBulkReminder(null)}
         onConfirm={confirmBulkReminder}
-      />
+      />}
     </div>
   );
 }
@@ -353,13 +356,13 @@ function SourceBadge({ debt }) {
   );
 }
 
-function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onRemind, navigate, returnTo }) {
+function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onRemind, navigate, returnTo, telegramEnabled = false }) {
   return (
     <Card className="overflow-x-auto">
-      <table className="w-full min-w-[1380px] text-left text-sm">
+      <table className={`w-full text-left text-sm ${telegramEnabled ? 'min-w-[1380px]' : 'min-w-[1260px]'}`}>
         <thead className="text-xs uppercase text-slate-500">
           <tr>
-            <th className="px-3 py-3">Tanlash</th>
+            {telegramEnabled && <th className="px-3 py-3">Tanlash</th>}
             {['#', 'Turi', 'Mijoz', 'Telefon', 'Nomi', 'Umumiy', 'To‘langan', 'Qolgan qarz', 'Sana', 'Status', 'Amallar'].map((heading) => (
               <th key={heading} className="px-3 py-3">{heading}</th>
             ))}
@@ -368,7 +371,7 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
         <tbody className="divide-y divide-white/10">
           {debts.map((debt, index) => (
             <tr key={`${debt.debtSource}-${debt._id}`} className="cursor-pointer transition hover:bg-white/5" onClick={() => onView(debt)}>
-              <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
+              {telegramEnabled && <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={selectedDebtIds.has(debtKey(debt))}
@@ -377,14 +380,14 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
                   className="h-4 w-4 rounded border-white/20 bg-slate-950/60 accent-rose-400"
                   aria-label="Qarzdorni tanlash"
                 />
-              </td>
+              </td>}
               <td className="px-3 py-3 font-bold text-slate-500">{index + 1}</td>
               <td className="w-28 px-3 py-3"><SourceBadge debt={debt} /></td>
               <td className="px-3 py-3 font-semibold text-slate-100">
                 <CopyableText value={debt.customerName} label="Mijoz ismini nusxalash" />
               </td>
               <td className="px-3 py-3 text-slate-300">
-                <CopyableText value={debt.phone || debt.telegramPhone} label="Telefon raqamni nusxalash" />
+                <CopyableText value={telegramEnabled ? debt.phone || debt.telegramPhone : debt.phone} label="Telefon raqamni nusxalash" />
               </td>
               <td className="max-w-xs px-3 py-3 text-slate-300">{debt.title || debt.orderText || debt.productName}</td>
               <td className="px-3 py-3 text-slate-200">{formatCurrency(debt.totalAmount)}</td>
@@ -395,7 +398,7 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
               <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
                 <div className="flex justify-end gap-2">
                   {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> To‘lov</Button>}
-                  {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
+                  {telegramEnabled && debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
                   <Button variant="ghost" onClick={() => navigate(debtTargetUrl(debt), { state: { returnTo, returnLabel: "Qarzlar bo'limiga qaytish" } })} className="px-3"><ExternalLink className="h-4 w-4" /></Button>
                 </div>
               </td>
@@ -407,12 +410,12 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
   );
 }
 
-function DebtCard({ debt, index, selected, onToggleSelect, onView, onPay, onRemind, navigate, returnTo }) {
+function DebtCard({ debt, index, selected, onToggleSelect, onView, onPay, onRemind, navigate, returnTo, telegramEnabled = false }) {
   return (
     <Card className="cursor-pointer" onClick={() => onView(debt)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 gap-3">
-          <input
+          {telegramEnabled && <input
             type="checkbox"
             checked={selected}
             disabled={debt.debtAmount <= 0}
@@ -420,7 +423,7 @@ function DebtCard({ debt, index, selected, onToggleSelect, onView, onPay, onRemi
             onChange={() => onToggleSelect(debt)}
             className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-slate-950/60 accent-rose-400"
             aria-label="Qarzdorni tanlash"
-          />
+          />}
           <div className="min-w-0">
             <p className="text-xs font-bold text-slate-500">#{index + 1}</p>
             <h3 className="mt-1 text-lg font-bold text-slate-100">
@@ -438,14 +441,14 @@ function DebtCard({ debt, index, selected, onToggleSelect, onView, onPay, onRemi
       </div>
       <div className="mt-4 flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
         {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> To‘lov</Button>}
-        {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
+        {telegramEnabled && debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
         <Button variant="ghost" onClick={() => navigate(debtTargetUrl(debt), { state: { returnTo, returnLabel: "Qarzlar bo'limiga qaytish" } })} className="px-3"><ExternalLink className="h-4 w-4" /></Button>
       </div>
     </Card>
   );
 }
 
-function DebtDetailsModal({ debt, onClose, onPay }) {
+function DebtDetailsModal({ debt, onClose, onPay, telegramEnabled = false }) {
   return (
     <Modal open={Boolean(debt)} title="Qarz tafsilotlari" onClose={onClose} maxWidth="max-w-2xl">
       {debt && (
@@ -467,7 +470,7 @@ function DebtDetailsModal({ debt, onClose, onPay }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoCard label="Telefon" value={debt.phone || '-'} copyable />
-            <InfoCard label="Telegram raqam" value={debt.telegramPhone || debt.phone || '-'} copyable />
+            {telegramEnabled && <InfoCard label="Telegram raqam" value={debt.telegramPhone || debt.phone || '-'} copyable />}
             <InfoCard label="Sana" value={formatDate(debt.createdAt)} />
             {debt.pickupDate && <InfoCard label="Olib ketish" value={formatDate(debt.pickupDate)} />}
             <InfoCard label="Izoh" value={debt.note || '-'} />

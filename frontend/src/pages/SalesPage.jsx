@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChevronLeft, Grid2X2, List, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
-import { useCreateSaleMutation, useDeleteSaleMutation, useSalesQuery, useUpdateSaleMutation } from '../services/api';
+import { useCreateSaleMutation, useDeleteSaleMutation, useSalesQuery, useSettingsQuery, useUpdateSaleMutation } from '../services/api';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 
@@ -41,16 +41,18 @@ const optionalPhoneField = z
   .transform((value) => value || '')
   .refine((value) => !value || /^\d{9}$/.test(value), invalidPhoneText);
 
-const schema = z.object({
+function buildSchema(telegramEnabled) {
+  return z.object({
   productName: z.string({ required_error: requiredText }).trim().min(2, 'Tovar nomini kiriting'),
   customerName: z.string().optional(),
   phone: optionalPhoneField,
-  telegramPhone: optionalPhoneField,
+  telegramPhone: telegramEnabled ? optionalPhoneField : z.string().optional().transform(() => ''),
   amount: numberField,
   paidAmount: numberField,
   paymentType: z.string({ required_error: requiredText }).min(1, 'To‘lov turini tanlang'),
   note: z.string().optional(),
-});
+  });
+}
 
 function stripPhone(value = '') {
   const digits = value.replace(/\D/g, '');
@@ -107,6 +109,9 @@ export default function SalesPage() {
   const [createSale, createState] = useCreateSaleMutation();
   const [updateSale, updateState] = useUpdateSaleMutation();
   const [deleteSale] = useDeleteSaleMutation();
+  const { data: settingsData } = useSettingsQuery();
+  const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
+  const schema = useMemo(() => buildSchema(telegramEnabled), [telegramEnabled]);
   const { register, handleSubmit, reset, watch, setValue, formState } = useForm({
     resolver: zodResolver(schema),
     defaultValues: buildDefaults(null),
@@ -148,7 +153,7 @@ export default function SalesPage() {
     const body = {
       ...values,
       phone: withUzPrefix(values.phone),
-      telegramPhone: withUzPrefix(values.telegramPhone),
+      telegramPhone: telegramEnabled ? withUzPrefix(values.telegramPhone) : '',
       amount: Number(values.amount || 0),
       paidAmount: Number(values.paidAmount || 0),
     };
@@ -249,7 +254,7 @@ export default function SalesPage() {
                     <CopyableText value={sale.customerName} label="Mijoz ismini nusxalash" />
                   </td>
                   <td className="px-3 py-3 text-slate-300">
-                    <CopyableText value={sale.phone || sale.telegramPhone} label="Telefon raqamni nusxalash" />
+                    <CopyableText value={telegramEnabled ? sale.phone || sale.telegramPhone : sale.phone} label="Telefon raqamni nusxalash" />
                   </td>
                   <td className="px-3 py-3 font-bold text-slate-100">{formatCurrency(sale.amount)}</td>
                   <td className="px-3 py-3 text-emerald-300">{formatCurrency(sale.paidAmount || 0)}</td>
@@ -269,7 +274,7 @@ export default function SalesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.map((sale, index) => (
-            <SaleCard key={sale._id} sale={sale} index={index} highlighted={sale._id === highlightId} onView={setViewingSale} onEdit={openEdit} onDelete={setDeletingSale} />
+            <SaleCard key={sale._id} sale={sale} index={index} highlighted={sale._id === highlightId} onView={setViewingSale} onEdit={openEdit} onDelete={setDeletingSale} telegramEnabled={telegramEnabled} />
           ))}
         </div>
       )}
@@ -280,7 +285,9 @@ export default function SalesPage() {
           <Select label="To‘lov turi" error={formState.errors.paymentType?.message} {...register('paymentType')}>{paymentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select>
           <Input label="Mijoz ismi" {...register('customerName')} />
           <Input label="Telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.phone?.message} {...register('phone')} />
-          <Input label="Telegram telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.telegramPhone?.message} {...register('telegramPhone')} />
+          {telegramEnabled && (
+            <Input label="Telegram telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.telegramPhone?.message} {...register('telegramPhone')} />
+          )}
           <Input label="Jami summa" type="number" min="0" error={formState.errors.amount?.message} {...register('amount')} />
           <Input label="Qilingan to‘lov" type="number" min="0" error={formState.errors.paidAmount?.message} {...register('paidAmount')} />
           <div className={`rounded-lg border p-3 ${debtAmount > 0 ? 'border-amber-300/20 bg-amber-400/10 text-amber-100' : 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'}`}>
@@ -318,12 +325,12 @@ export default function SalesPage() {
         <Pagination {...pagination} onPageChange={(page) => setParams((current) => ({ ...current, page }))} />
       )}
 
-      <SaleDetailsModal sale={viewingSale} onClose={() => setViewingSale(null)} onEdit={openEdit} />
+      <SaleDetailsModal sale={viewingSale} onClose={() => setViewingSale(null)} onEdit={openEdit} telegramEnabled={telegramEnabled} />
     </div>
   );
 }
 
-function SaleCard({ sale, index, highlighted, onView, onEdit, onDelete }) {
+function SaleCard({ sale, index, highlighted, onView, onEdit, onDelete, telegramEnabled = false }) {
   return (
     <Card className={`cursor-pointer ${highlighted ? 'bg-amber-400/10 ring-1 ring-amber-300/30' : ''}`} onClick={() => onView(sale)}>
       <div className="flex items-start justify-between gap-3">
@@ -348,9 +355,9 @@ function SaleCard({ sale, index, highlighted, onView, onEdit, onDelete }) {
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-slate-300">
-            <CopyableText value={sale.phone} label="Telefon raqamni nusxalash" />
+            <CopyableText value={telegramEnabled ? sale.phone || sale.telegramPhone : sale.phone} label="Telefon raqamni nusxalash" />
           </p>
-          {sale.telegramPhone && (
+          {telegramEnabled && sale.telegramPhone && (
             <p className="mt-1 text-xs text-sky-300">
               <CopyableText value={sale.telegramPhone} label="Telegram raqamni nusxalash">TG: {sale.telegramPhone}</CopyableText>
             </p>
@@ -375,7 +382,7 @@ function Info({ label, value, danger }) {
   );
 }
 
-function SaleDetailsModal({ sale, onClose, onEdit }) {
+function SaleDetailsModal({ sale, onClose, onEdit, telegramEnabled = false }) {
   return (
     <Modal open={Boolean(sale)} title="Sovg‘a/tovar tafsilotlari" onClose={onClose} maxWidth="max-w-2xl">
       {sale && (
@@ -395,7 +402,7 @@ function SaleDetailsModal({ sale, onClose, onEdit }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoCard label="Mijoz" value={sale.customerName || '-'} copyable />
             <InfoCard label="Telefon" value={sale.phone || '-'} copyable />
-            <InfoCard label="Telegram telefon" value={sale.telegramPhone || sale.phone || '-'} copyable />
+            {telegramEnabled && <InfoCard label="Telegram telefon" value={sale.telegramPhone || sale.phone || '-'} copyable />}
             <InfoCard label="To‘lov turi" value={paymentTypes.find(([value]) => value === sale.paymentType)?.[1] || sale.paymentType} />
             <InfoCard label="Izoh" value={sale.note || '-'} />
           </div>

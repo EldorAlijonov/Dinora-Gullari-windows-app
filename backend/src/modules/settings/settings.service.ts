@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { normalizeGooglePrivateKey } from '../../common/google-private-key';
 import { sanitizeImageUrl } from '../../common/image-url';
 import { LocalDatabaseService } from '../../local-db/local-database.service';
 import { AppSettings } from './schemas/settings.schema';
 
 const SETTINGS_KEY = 'global';
+type SettingsListener = () => void | Promise<void>;
 
-type LocalSettingsRow = Omit<AppSettings, 'telegramAdminIds'> & {
+type LocalSettingsRow = Omit<AppSettings, 'telegramAdminIds' | 'telegramBotConfigured'> & {
   key: string;
+  telegramBotToken: string;
   telegramAdminIds: string;
   createdAt: string;
   updatedAt: string;
@@ -15,7 +18,18 @@ type LocalSettingsRow = Omit<AppSettings, 'telegramAdminIds'> & {
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly database: LocalDatabaseService) {}
+  private readonly logger = new Logger(SettingsService.name);
+  private readonly telegramSettingsListeners = new Set<SettingsListener>();
+
+  constructor(
+    private readonly database: LocalDatabaseService,
+    private readonly config: ConfigService,
+  ) {}
+
+  onTelegramSettingsChanged(listener: SettingsListener) {
+    this.telegramSettingsListeners.add(listener);
+    return () => this.telegramSettingsListeners.delete(listener);
+  }
 
   async getSettings() {
     this.ensureSettings();
@@ -36,6 +50,7 @@ export class SettingsService {
       telegramDebtReminderEnabled: body.telegramDebtReminderEnabled,
       telegramDebtPaymentEnabled: body.telegramDebtPaymentEnabled,
       telegramSaleCreatedEnabled: body.telegramSaleCreatedEnabled,
+      telegramBotToken: body.telegramBotToken === undefined ? undefined : String(body.telegramBotToken || '').trim(),
       telegramAdminIds: Array.isArray(body.telegramAdminIds) ? this.cleanTelegramAdminIds(body.telegramAdminIds) : undefined,
       requirePhoneForDebtSales: body.requirePhoneForDebtSales,
       debtReminderAfterDays: body.debtReminderAfterDays,
@@ -62,6 +77,7 @@ export class SettingsService {
         new Date().toISOString(),
         SETTINGS_KEY,
       ]);
+      this.notifyTelegramSettingsChanged();
     }
 
     return this.getSettings();
@@ -75,6 +91,12 @@ export class SettingsService {
   async getTelegramAdminIds() {
     const settings = await this.getSettings();
     return this.cleanTelegramAdminIds(settings?.telegramAdminIds || []);
+  }
+
+  async getTelegramBotToken() {
+    this.ensureSettings();
+    const row = this.database.get<{ telegramBotToken: string }>('SELECT telegramBotToken FROM settings WHERE key = ? LIMIT 1', [SETTINGS_KEY]);
+    return String(row?.telegramBotToken || this.config.get<string>('TELEGRAM_BOT_TOKEN') || '').trim();
   }
 
   async addTelegramAdminId(chatId: string) {
@@ -97,18 +119,28 @@ export class SettingsService {
   }
 
   private mapSettings(row: LocalSettingsRow) {
+    const { telegramBotToken, ...safeRow } = row;
     return {
-      ...row,
+      ...safeRow,
       telegramOrderAcceptedEnabled: Boolean(row.telegramOrderAcceptedEnabled),
       telegramOrderStatusEnabled: Boolean(row.telegramOrderStatusEnabled),
       telegramDebtReminderEnabled: Boolean(row.telegramDebtReminderEnabled),
       telegramDebtPaymentEnabled: Boolean(row.telegramDebtPaymentEnabled),
       telegramSaleCreatedEnabled: Boolean(row.telegramSaleCreatedEnabled),
+      telegramBotConfigured: Boolean(telegramBotToken || this.config.get<string>('TELEGRAM_BOT_TOKEN')),
       requirePhoneForDebtSales: Boolean(row.requirePhoneForDebtSales),
       preventSameDayDebtReminder: Boolean(row.preventSameDayDebtReminder),
       googleSheetsEnabled: Boolean(row.googleSheetsEnabled),
       telegramAdminIds: this.parseTelegramAdminIds(row.telegramAdminIds),
     };
+  }
+
+  private notifyTelegramSettingsChanged() {
+    for (const listener of this.telegramSettingsListeners) {
+      Promise.resolve(listener()).catch((error) => {
+        this.logger.warn(`Telegram settings listener failed: ${error instanceof Error ? error.message : String(error)}`);
+      });
+    }
   }
 
   private parseTelegramAdminIds(value: string) {

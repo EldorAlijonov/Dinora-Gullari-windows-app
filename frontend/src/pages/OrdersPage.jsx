@@ -20,6 +20,7 @@ import {
   useOrdersQuery,
   useUpdateOrderMutation,
   useUpdateOrderStatusMutation,
+  useSettingsQuery,
 } from '../services/api';
 
 function isUnauthorized(error) {
@@ -65,6 +66,8 @@ export default function OrdersPage() {
   const [updateOrder, updateState] = useUpdateOrderMutation();
   const [deleteOrder, deleteState] = useDeleteOrderMutation();
   const [updateStatus, updateStatusState] = useUpdateOrderStatusMutation();
+  const { data: settingsData } = useSettingsQuery();
+  const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
 
   useEffect(() => {
     localStorage.setItem('ordersViewMode', viewMode);
@@ -159,7 +162,7 @@ export default function OrdersPage() {
     <div className="space-y-4">
       <PageHeader
         title="Gul buyurtmalari"
-        description="Gul buketi va kompozitsiya buyurtmalari, olib ketish va Telegram xabarlarini boshqaring."
+        description={telegramEnabled ? 'Gul buketi va kompozitsiya buyurtmalari, olib ketish va Telegram xabarlarini boshqaring.' : 'Gul buketi va kompozitsiya buyurtmalari hamda olib ketish jarayonini boshqaring.'}
         action={returnTo && (
           <Button variant="secondary" onClick={() => navigate(returnTo)}>
             <ChevronLeft className="h-4 w-4" />
@@ -181,22 +184,22 @@ export default function OrdersPage() {
         <EmptyState />
       ) : viewMode === 'table' ? (
         <>
-          <OrdersTable orders={data} highlightId={highlightId} onView={setViewingOrder} onEdit={openEdit} onDelete={setDeletingOrder} onStatusChange={changeStatus} />
+          <OrdersTable orders={data} highlightId={highlightId} onView={setViewingOrder} onEdit={openEdit} onDelete={setDeletingOrder} onStatusChange={changeStatus} telegramEnabled={telegramEnabled} />
           <Pagination {...pagination} onPageChange={(page) => setParams((current) => ({ ...current, page }))} />
         </>
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {data.map((order) => (
-              <OrderCard key={order._id} order={order} highlighted={order._id === highlightId} onView={setViewingOrder} onEdit={openEdit} onDelete={setDeletingOrder} onStatusChange={changeStatus} />
+              <OrderCard key={order._id} order={order} highlighted={order._id === highlightId} onView={setViewingOrder} onEdit={openEdit} onDelete={setDeletingOrder} onStatusChange={changeStatus} telegramEnabled={telegramEnabled} />
             ))}
           </div>
           <Pagination {...pagination} onPageChange={(page) => setParams((current) => ({ ...current, page }))} />
         </>
       )}
 
-      <OrderDetailsModal order={viewingOrder} onClose={() => setViewingOrder(null)} />
-      <OrderFormModal open={modalOpen} order={editingOrder} loading={createState.isLoading || updateState.isLoading} onClose={closeForm} onSubmit={submitOrder} />
+      <OrderDetailsModal order={viewingOrder} onClose={() => setViewingOrder(null)} telegramEnabled={telegramEnabled} />
+      <OrderFormModal open={modalOpen} order={editingOrder} loading={createState.isLoading || updateState.isLoading} onClose={closeForm} onSubmit={submitOrder} telegramEnabled={telegramEnabled} />
       <ConfirmModal
         open={Boolean(pendingSubmit)}
         title={editingOrder ? 'Buyurtmani yangilash' : 'Buyurtmani saqlash'}

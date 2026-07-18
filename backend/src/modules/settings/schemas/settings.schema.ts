@@ -10,6 +10,8 @@ export class AppSettings {
   telegramDebtReminderEnabled: boolean;
   telegramDebtPaymentEnabled: boolean;
   telegramSaleCreatedEnabled: boolean;
+  telegramBotToken?: string;
+  telegramBotConfigured?: boolean;
   telegramAdminIds: string[];
   requirePhoneForDebtSales: boolean;
   debtReminderAfterDays: number;

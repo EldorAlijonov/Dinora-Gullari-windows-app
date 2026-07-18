@@ -106,6 +106,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private lastAutomaticAdminAlertAt?: Date;
   private failedNotificationRetryTimer?: NodeJS.Timeout;
   private failedNotificationRetryInProgress = false;
+  private currentBotToken = '';
+  private removeTelegramSettingsListener?: () => boolean;
 
   constructor(
     private readonly config: ConfigService,
@@ -115,26 +117,54 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    await this.database.open();
+    this.removeTelegramSettingsListener = this.settingsService.onTelegramSettingsChanged(() => void this.configureBotFromSettings());
+    await this.configureBotFromSettings();
+  }
+
+  onModuleDestroy() {
+    this.removeTelegramSettingsListener?.();
+    void this.stopBot();
+  }
+
+  private async configureBotFromSettings() {
+    const token = await this.settingsService.getTelegramBotToken();
     if (!token || token === 'your_telegram_bot_token') {
+      await this.stopBot();
       this.logger.warn('Telegram bot token is not configured');
       return;
     }
 
-    await this.database.open();
+    if (this.bot && this.currentBotToken === token) return;
+
+    await this.stopBot();
+    this.currentBotToken = token;
     this.bot = new TelegramBot(token, { polling: true });
     this.bot.on('polling_error', (error) => {
       if (this.isTelegramNetworkError(error)) void this.createInternetRequiredNotification(error);
     });
     this.registerHandlers();
+    this.startFailedNotificationRetry();
+  }
+
+  private startFailedNotificationRetry() {
+    if (this.failedNotificationRetryTimer) clearInterval(this.failedNotificationRetryTimer);
     void this.retryFailedNotifications();
     this.failedNotificationRetryTimer = setInterval(() => void this.retryFailedNotifications(), FAILED_NOTIFICATION_RETRY_INTERVAL_MS);
     this.failedNotificationRetryTimer.unref?.();
   }
 
-  onModuleDestroy() {
+  private async stopBot() {
     if (this.failedNotificationRetryTimer) clearInterval(this.failedNotificationRetryTimer);
-    void this.bot?.stopPolling();
+    this.failedNotificationRetryTimer = undefined;
+    const bot = this.bot;
+    this.bot = undefined;
+    this.currentBotToken = '';
+    try {
+      await bot?.stopPolling();
+    } catch (error) {
+      this.logger.warn(`Telegram polling stop failed: ${this.errorMessage(error)}`);
+    }
   }
 
   async sendOrderAccepted(phone: string, details: OrderTelegramDetails) {

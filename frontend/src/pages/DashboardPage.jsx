@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { CopyableText } from '../components/ui/CopyableText';
 import { Modal } from '../components/ui/Modal';
-import { useDashboardQuery } from '../services/api';
+import { useDashboardQuery, useSettingsQuery } from '../services/api';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 
@@ -152,6 +152,8 @@ export default function DashboardPage() {
   const [debtModalOpen, setDebtModalOpen] = useState(false);
   const [selectedTradePeriod, setSelectedTradePeriod] = useState('daily');
   const { data, isLoading, isFetching, isError, refetch } = useDashboardQuery();
+  const { data: settingsData } = useSettingsQuery();
+  const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
 
   useEffect(() => {
     if (isError) toast.error('Dashboard ma`lumotlarini yuklashda xatolik yuz berdi');
@@ -386,9 +388,11 @@ export default function DashboardPage() {
                 renderMeta={(order) => (
                   <>
                     <span>{formatDate(order.pickupDate)}</span>
-                    <span className={order.isTelegramNotified ? 'text-emerald-300' : 'text-amber-300'}>
-                      {order.isTelegramNotified ? 'Telegram yuborilgan' : 'Telegram yuborilmagan'}
-                    </span>
+                    {telegramEnabled && (
+                      <span className={order.isTelegramNotified ? 'text-emerald-300' : 'text-amber-300'}>
+                        {order.isTelegramNotified ? 'Telegram yuborilgan' : 'Telegram yuborilmagan'}
+                      </span>
+                    )}
                   </>
                 )}
               />
@@ -449,7 +453,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      <OrderDetailsModal order={viewingOrder} onClose={() => setViewingOrder(null)} />
+      <OrderDetailsModal order={viewingOrder} onClose={() => setViewingOrder(null)} telegramEnabled={telegramEnabled} />
       <Modal open={debtModalOpen} title="Nasiya savdo taqsimoti" onClose={() => setDebtModalOpen(false)} maxWidth="max-w-lg">
         <div className="space-y-3">
           <div className="rounded-lg border border-rose-300/20 bg-rose-400/10 p-4">

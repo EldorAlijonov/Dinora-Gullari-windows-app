@@ -19,7 +19,7 @@ function DetailItem({ icon: Icon, label, value, copyable }) {
   );
 }
 
-export function OrderDetailsModal({ order, onClose }) {
+export function OrderDetailsModal({ order, onClose, telegramEnabled = false }) {
   return (
     <Modal open={Boolean(order)} title="Buyurtma tavsilotlari" onClose={onClose} maxWidth="max-w-3xl">
       {order && (
@@ -36,7 +36,7 @@ export function OrderDetailsModal({ order, onClose }) {
 
           <div className="grid gap-3 md:grid-cols-2">
             <DetailItem icon={Phone} label="Aloqa telefoni" value={order.phone} copyable />
-            <DetailItem icon={Send} label="Telegram telefoni" value={order.telegramPhone || order.phone} copyable />
+            {telegramEnabled && <DetailItem icon={Send} label="Telegram telefoni" value={order.telegramPhone || order.phone} copyable />}
             <DetailItem icon={CalendarClock} label="Yaratilgan sana" value={formatDate(order.createdAt)} />
             <DetailItem icon={CalendarClock} label="Olib ketish sanasi" value={formatDate(order.pickupDate)} />
           </div>
