@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { normalizePhone } from '../../common/phone';
 import { LocalDatabaseService } from '../../local-db/local-database.service';
+import { SettingsService } from '../settings/settings.service';
 import { NotificationStatus } from './schemas/notification.schema';
 
 type AdminNotification = {
@@ -54,7 +55,10 @@ const INTERNET_REQUIRED_NOTIFICATION_TYPE = 'telegram_internet_required';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly database: LocalDatabaseService) {}
+  constructor(
+    private readonly database: LocalDatabaseService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   async create(phone: string, type: string, message: string, status: NotificationStatus) {
     const normalizedPhone = normalizePhone(phone);
@@ -96,11 +100,11 @@ export class NotificationsService {
     const readyOrders = this.orders("status = 'ready'", [], 'updatedAt DESC');
     const debtOrders = this.orders("debtAmount > 0 AND status != 'cancelled'", [], 'debtAmount DESC');
     const debtSales = this.database.all<SaleRow>('SELECT * FROM sales WHERE debtAmount > 0 ORDER BY createdAt DESC LIMIT 8');
-    const failedTelegram = this.notifications("status = 'failed' AND resolvedAt IS NULL", 'createdAt DESC');
-    const sentTelegram = this.notifications(
-      `status = 'sent' AND resolvedAt IS NULL AND type != '${INTERNET_REQUIRED_NOTIFICATION_TYPE}'`,
-      'sentAt DESC, createdAt DESC',
-    );
+    const telegramEnabled = await this.isTelegramConfigured();
+    const failedTelegram = telegramEnabled ? this.notifications("status = 'failed' AND resolvedAt IS NULL", 'createdAt DESC') : [];
+    const sentTelegram = telegramEnabled
+      ? this.notifications(`status = 'sent' AND resolvedAt IS NULL AND type != '${INTERNET_REQUIRED_NOTIFICATION_TYPE}'`, 'sentAt DESC, createdAt DESC')
+      : [];
 
     const items: Omit<AdminNotification, 'order'>[] = [
       ...overdueOrders.map((order) => ({
@@ -234,5 +238,10 @@ export class NotificationsService {
       telegram_internet_required: 'Telegram uchun internet kerak',
     };
     return labels[type] || 'Telegram xabar';
+  }
+
+  private async isTelegramConfigured() {
+    const token = await this.settingsService.getTelegramBotToken();
+    return Boolean(token && token !== 'your_telegram_bot_token');
   }
 }

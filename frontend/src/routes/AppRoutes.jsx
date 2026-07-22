@@ -9,12 +9,19 @@ import DebtsPage from '../pages/DebtsPage';
 import ReportsPage from '../pages/ReportsPage';
 import SettingsPage from '../pages/SettingsPage';
 import ArchivePage from '../pages/ArchivePage';
+import ChangePasswordPage from '../pages/ChangePasswordPage';
+import ServicePanel from '../pages/ServicePanel';
+import { ServiceRoute } from './ServiceRoute';
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
+        <Route path="/change-password" element={<ChangePasswordPage />} />
+        <Route path="/service" element={<ServiceRoute />}>
+          <Route index element={<ServicePanel />} />
+        </Route>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="orders" element={<OrdersPage />} />

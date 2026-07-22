@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

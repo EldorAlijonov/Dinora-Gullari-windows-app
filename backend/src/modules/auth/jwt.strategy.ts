@@ -5,7 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { UsersService } from '../users/users.service';
 
-type JwtPayload = { sub: string; email: string; role: string };
+type JwtPayload = { sub: string; userId?: string; username: string | null; role: string };
 
 function cookieExtractor(request: Request) {
   const cookieHeader = request?.headers?.cookie;
@@ -33,6 +33,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return { userId: payload.sub, email: payload.email, role: payload.role };
+    return { userId: user.id, username: user.username, role: user.role };
   }
 }
