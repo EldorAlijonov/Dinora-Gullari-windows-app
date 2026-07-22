@@ -19,11 +19,20 @@ export class AuthService {
       throw new UnauthorizedException('Login yoki parol noto‘g‘ri');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, userId: user.id, username: user.username, role: user.role };
     return {
       accessToken: await this.jwtService.signAsync(payload),
       expiresIn: this.config.get<string>('JWT_EXPIRES_IN') || '12h',
-      user: { id: user.id, fullName: user.fullName, email: user.email, phone: user.phone, role: user.role, avatarUrl: user.avatarUrl },
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        username: user.username,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+        mustChangePassword: user.mustChangePassword,
+      },
     };
   }
 }

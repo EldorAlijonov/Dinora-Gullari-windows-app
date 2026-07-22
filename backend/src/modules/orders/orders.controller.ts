@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { BulkDeleteDto } from '../../common/dto/bulk-delete.dto';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -11,7 +12,7 @@ import { OrdersService } from './orders.service';
 import { OrderStatus } from './schemas/order.schema';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

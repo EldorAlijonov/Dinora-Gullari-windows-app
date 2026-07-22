@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Flower2, Lock, Phone } from 'lucide-react';
+import { Eye, EyeOff, Flower2, Lock, Phone, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useDispatch, useSelector } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -24,11 +24,22 @@ export default function LoginPage() {
   const [login, { isLoading, error }] = useLoginMutation();
   const { register, handleSubmit, formState } = useForm({ resolver: zodResolver(schema), defaultValues: { login: '', password: '' } });
 
-  if (user) return <Navigate to="/" replace />;
+  const navigate = useNavigate();
+
+  if (user) return <Navigate to={user.role === 'service' ? '/service' : '/'} replace />;
 
   const onSubmit = async (values) => {
     const result = await login(values).unwrap();
     dispatch(setCredentials(result));
+    if (Number(result?.user?.mustChangePassword) === 1) {
+      navigate('/change-password', { replace: true });
+      return;
+    }
+    if (result?.user?.role === 'service') {
+      navigate('/service', { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
   };
 
   return (
@@ -55,7 +66,14 @@ export default function LoginPage() {
           <p className="text-sm font-bold uppercase text-rose-500">Admin panel</p>
           <h2 className="mt-1 text-3xl font-bold text-slate-950">Tizimga kirish</h2>
           <div className="mt-8 space-y-4">
-            <Input label="Telefon yoki email" placeholder="+998901234567" error={formState.errors.login?.message} {...register('login')} />
+            <Input
+              label="Login / Telefon / Email"
+              placeholder="Login / Telefon / Email"
+              error={formState.errors.login?.message}
+              leftElement={<UserRound className="h-4 w-4 text-slate-500" />}
+              className="pl-10"
+              {...register('login')}
+            />
             <Input
               label="Parol"
               type={showPassword ? 'text' : 'password'}

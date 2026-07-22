@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { BulkDeleteDto } from '../../common/dto/bulk-delete.dto';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -10,7 +11,7 @@ import { SalesService } from './sales.service';
 import { PaymentType } from './schemas/sale.schema';
 
 @Controller('sales')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 

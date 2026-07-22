@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AppSettings } from './schemas/settings.schema';
 import { SettingsService } from './settings.service';
@@ -14,13 +15,13 @@ export class SettingsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
   getSettings() {
     return this.settingsService.getSettings();
   }
 
   @Patch()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
   updateSettings(@Body() body: Partial<AppSettings>) {
     return this.settingsService.updateSettings(body);
   }

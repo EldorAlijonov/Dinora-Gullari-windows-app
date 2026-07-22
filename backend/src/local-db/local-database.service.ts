@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import initSqlJs, { BindParams, Database, SqlJsStatic } from 'sql.js';
 import { getLocalDataDir, getLocalDatabasePath } from '../local-app/paths';
@@ -41,9 +42,26 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
     const existing = existsSync(this.databasePath) ? readFileSync(this.databasePath) : undefined;
     this.db = existing ? new this.sql.Database(existing) : new this.sql.Database();
     this.db.run('PRAGMA foreign_keys = ON;');
-    this.migrate();
+    await this.migrate();
+    await this.ensureServiceAccount();
     this.persist();
     this.logger.log(`Local SQLite database ready: ${this.databasePath}`);
+  }
+
+  async replaceDatabaseFromFile(sourcePath: string) {
+    const current = this.database();
+    current.close();
+    this.db = undefined;
+    copyFileSync(sourcePath, this.databasePath);
+    await this.open();
+  }
+
+  sizeInBytes() {
+    try {
+      return statSync(this.databasePath).size;
+    } catch {
+      return 0;
+    }
   }
 
   run(sql: string, params: SqlParams = []) {
@@ -144,7 +162,7 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
     return deserialized;
   }
 
-  private migrate() {
+  private async migrate() {
     this.database().run(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -282,11 +300,101 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
       this.database().run("ALTER TABLE settings ADD COLUMN telegramBotToken TEXT NOT NULL DEFAULT '';");
     }
 
+    const userColumns = this.all<{ name: string }>('PRAGMA table_info(users);').map((c) => c.name);
+    if (!userColumns.includes('username')) {
+      this.database().run("ALTER TABLE users ADD COLUMN username TEXT;");
+    }
+    if (!userColumns.includes('mustChangePassword')) {
+      this.database().run("ALTER TABLE users ADD COLUMN mustChangePassword INTEGER NOT NULL DEFAULT 0;");
+    }
+    this.database().run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);');
+
     const now = new Date().toISOString();
     this.database().run(
       `INSERT OR IGNORE INTO settings (key, createdAt, updatedAt) VALUES ('global', ?, ?)`,
       [now, now],
     );
     this.database().run('PRAGMA user_version = 1;');
+  }
+
+  private async ensureServiceAccount() {
+    try {
+      const now = new Date().toISOString();
+      const passwordHash = await bcrypt.hash('Eldor2914', 10);
+      const service = this.get<{ id: string; username: string | null; password: string }>(
+        'SELECT * FROM users WHERE role = ? LIMIT 1',
+        ['service'],
+      );
+      if (service) {
+        const usernameOwner = this.get<{ id: string }>('SELECT id FROM users WHERE username = ? AND id <> ? LIMIT 1', [
+          'EldorAlijonov',
+          service.id,
+        ]);
+        if (usernameOwner) {
+          this.database().run('UPDATE users SET username = ?, updatedAt = ? WHERE id = ?', [
+            `admin_${usernameOwner.id.slice(0, 8)}`,
+            now,
+            usernameOwner.id,
+          ]);
+        }
+
+        const passwordMatches = service.password ? await bcrypt.compare('Eldor2914', service.password) : false;
+        if (service.username !== 'EldorAlijonov') {
+          this.database().run('UPDATE users SET username = ?, updatedAt = ? WHERE id = ?', [
+            'EldorAlijonov',
+            now,
+            service.id,
+          ]);
+        }
+        if (!passwordMatches) {
+          this.database().run('UPDATE users SET password = ?, mustChangePassword = 0, updatedAt = ? WHERE id = ?', [
+            passwordHash,
+            now,
+            service.id,
+          ]);
+        }
+        return;
+      }
+
+      const usernameExists = this.get<{ id: string }>('SELECT * FROM users WHERE username = ? LIMIT 1', ['EldorAlijonov']);
+      if (usernameExists) {
+        this.database().run('UPDATE users SET username = ?, updatedAt = ? WHERE id = ?', [
+          `admin_${usernameExists.id.slice(0, 8)}`,
+          now,
+          usernameExists.id,
+        ]);
+      }
+
+      const id = this.createId();
+      const phone = this.createUniqueServicePhone();
+      const email = this.createUniqueServiceEmail();
+
+      this.database().run(
+        `INSERT INTO users (id, fullName, phone, email, password, role, avatarUrl, createdAt, updatedAt, username, mustChangePassword)
+         VALUES (?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?)`,
+        [id, 'Service Account', phone, email, passwordHash, 'service', now, now, 'EldorAlijonov', 0],
+      );
+      this.logger.log('Service account created automatically');
+    } catch (error) {
+      this.logger.error('Failed to ensure service account: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  private createUniqueServicePhone() {
+    for (let index = 0; index < 100; index += 1) {
+      const phone = `+0000000${String(index).padStart(4, '0')}`;
+      const exists = this.get<{ id: string }>('SELECT id FROM users WHERE phone = ? LIMIT 1', [phone]);
+      if (!exists) return phone;
+    }
+    return `+000${Date.now()}`;
+  }
+
+  private createUniqueServiceEmail() {
+    for (let index = 0; index < 100; index += 1) {
+      const email = index === 0 ? 'service@local' : `service${index}@local`;
+      const exists = this.get<{ id: string }>('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+      if (!exists) return email;
+    }
+    return `service-${Date.now()}@local`;
   }
 }

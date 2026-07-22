@@ -16,6 +16,7 @@ import { validateEnv } from './config/env.validation';
 import { BackupsModule } from './modules/backups/backups.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module';
+import { ServiceModule } from './modules/service/service.module';
 
 @Module({
   imports: [
@@ -35,6 +36,8 @@ import { GoogleSheetsModule } from './modules/google-sheets/google-sheets.module
     GoogleSheetsModule,
     BackupsModule,
     MonitoringModule,
+    // Service tools for developer maintenance
+    ServiceModule,
   ],
 })
 export class AppModule {}
