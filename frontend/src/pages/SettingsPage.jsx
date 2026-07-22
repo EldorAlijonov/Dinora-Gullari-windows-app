@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { PasswordInput } from '../components/ui/PasswordInput';
 import { Textarea } from '../components/ui/Textarea';
 import { updateUser } from '../features/auth/authSlice';
 import { useChangePasswordMutation, useSettingsQuery, useTestGoogleSheetsMutation, useUpdateMeMutation, useUpdateSettingsMutation } from '../services/api';
@@ -171,9 +172,8 @@ export default function SettingsPage() {
   const [openSections, setOpenSections] = useState({ store: true, account: false, telegram: false, google: false });
   const [settings, setSettings] = useState(defaultSettings);
   const [telegramAdminInput, setTelegramAdminInput] = useState('');
-  const [showTelegramToken, setShowTelegramToken] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
-  const [profile, setProfile] = useState({ fullName: '', email: '', phone: '', avatarUrl: '' });
+  const [profile, setProfile] = useState({ fullName: '', username: '', phone: '', avatarUrl: '' });
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const telegramConfigured = Boolean(settings.telegramBotConfigured);
 
@@ -185,7 +185,7 @@ export default function SettingsPage() {
   useEffect(() => {
     setProfile({
       fullName: user?.fullName || '',
-      email: user?.email || '',
+      username: user?.username || '',
       phone: user?.phone || '',
       avatarUrl: user?.avatarUrl || '',
     });
@@ -340,7 +340,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-4">
               <Input label="Ism familiya" value={profile.fullName} onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} />
-              <Input label="Email" value={profile.email} onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))} />
+              <Input label="Login" value={profile.username} onChange={(event) => setProfile((current) => ({ ...current, username: event.target.value }))} />
               <Input label="Telefon" value={profile.phone} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} />
             </div>
             <Button type="button" loading={profileState.isLoading} className="mt-4" onClick={saveProfile}>
@@ -354,9 +354,9 @@ export default function SettingsPage() {
               <h3 className="font-bold text-slate-100">Parol almashtirish</h3>
             </div>
             <div className="space-y-4">
-              <Input label="Joriy parol" type="password" value={passwords.currentPassword} onChange={(event) => setPasswords((current) => ({ ...current, currentPassword: event.target.value }))} />
-              <Input label="Yangi parol" type="password" value={passwords.newPassword} onChange={(event) => setPasswords((current) => ({ ...current, newPassword: event.target.value }))} />
-              <Input label="Yangi parolni takrorlang" type="password" value={passwords.confirmPassword} onChange={(event) => setPasswords((current) => ({ ...current, confirmPassword: event.target.value }))} />
+              <PasswordInput label="Joriy parol" value={passwords.currentPassword} onChange={(event) => setPasswords((current) => ({ ...current, currentPassword: event.target.value }))} />
+              <PasswordInput label="Yangi parol" value={passwords.newPassword} onChange={(event) => setPasswords((current) => ({ ...current, newPassword: event.target.value }))} />
+              <PasswordInput label="Yangi parolni takrorlang" value={passwords.confirmPassword} onChange={(event) => setPasswords((current) => ({ ...current, confirmPassword: event.target.value }))} />
             </div>
             <Button type="button" loading={passwordState.isLoading} className="mt-4" onClick={savePassword}>
               <KeyRound className="h-4 w-4" /> Parolni yangilash
@@ -382,23 +382,13 @@ export default function SettingsPage() {
                   {telegramConfigured ? 'Ulangan' : 'Ulanmagan'}
                 </span>
               </div>
-              <Input
+              <PasswordInput
                 label="Bot token"
-                type={showTelegramToken ? 'text' : 'password'}
                 placeholder={telegramConfigured ? 'Yangi token kiritsangiz eskisi almashadi' : 'BotFather tokenini kiriting'}
                 value={settings.telegramBotToken}
                 onChange={(event) => setSetting('telegramBotToken', event.target.value)}
-                rightElement={(
-                  <button
-                    type="button"
-                    className="grid h-7 w-7 place-items-center rounded-md text-slate-400 transition hover:bg-white/10 hover:text-slate-100"
-                    onClick={() => setShowTelegramToken((current) => !current)}
-                    title={showTelegramToken ? 'Yashirish' : "Ko'rish"}
-                    aria-label={showTelegramToken ? 'Tokenni yashirish' : "Tokenni ko'rish"}
-                  >
-                    {showTelegramToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                )}
+                visibleLabel="Tokenni ko'rish"
+                hiddenLabel="Tokenni yashirish"
               />
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button type="button" loading={settingsState.isLoading} onClick={() => saveSettings()}>

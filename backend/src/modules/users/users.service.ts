@@ -44,7 +44,7 @@ export class UsersService {
     return user ? this.withoutPassword(user) : null;
   }
 
-  async updateProfile(id: string, body: { fullName?: string; phone?: string; email?: string; avatarUrl?: string }) {
+  async updateProfile(id: string, body: { fullName?: string; phone?: string; email?: string; username?: string; avatarUrl?: string }) {
     const current = this.database.get<LocalUser>('SELECT * FROM users WHERE id = ? LIMIT 1', [id]);
     if (!current) throw new NotFoundException('User not found');
 
@@ -52,17 +52,20 @@ export class UsersService {
       fullName: body.fullName || current.fullName,
       phone: body.phone ? normalizePhone(body.phone) : current.phone,
       email: body.email ? body.email.toLowerCase() : current.email,
+      username: body.username === undefined ? current.username : body.username.trim(),
       avatarUrl: body.avatarUrl === undefined ? current.avatarUrl : sanitizeImageUrl(body.avatarUrl, 'Profil rasmi') || '',
       updatedAt: new Date().toISOString(),
     };
 
+    if (!next.username) throw new BadRequestException('Login kiritilishi shart');
+
     try {
       this.database.run(
-        `UPDATE users SET fullName = ?, phone = ?, email = ?, avatarUrl = ?, updatedAt = ? WHERE id = ?`,
-        [next.fullName, next.phone, next.email, next.avatarUrl, next.updatedAt, id],
+        `UPDATE users SET fullName = ?, phone = ?, email = ?, username = ?, avatarUrl = ?, updatedAt = ? WHERE id = ?`,
+        [next.fullName, next.phone, next.email, next.username, next.avatarUrl, next.updatedAt, id],
       );
     } catch {
-      throw new BadRequestException('Telefon yoki email avval ro‘yxatdan o‘tgan');
+      throw new BadRequestException('Login, telefon yoki email avval royxatdan otgan');
     }
 
     const user = this.database.get<LocalUser>('SELECT * FROM users WHERE id = ? LIMIT 1', [id]);
@@ -73,7 +76,7 @@ export class UsersService {
     const user = this.database.get<LocalUser>('SELECT * FROM users WHERE id = ? LIMIT 1', [id]);
     if (!user) throw new NotFoundException('User not found');
     if (!user.password || !(await bcrypt.compare(body.currentPassword, user.password))) {
-      throw new BadRequestException('Joriy parol noto‘g‘ri');
+      throw new BadRequestException('Joriy parol notogri');
     }
 
     this.database.run('UPDATE users SET password = ?, mustChangePassword = 0, updatedAt = ? WHERE id = ?', [

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { PasswordInput } from '../components/ui/PasswordInput';
 import { logout } from '../features/auth/authSlice';
 import apiClient, { useLogoutMutation } from '../services/api';
 
@@ -19,7 +20,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-white/10 py-3 last:border-b-0">
       <span className="text-sm text-slate-400">{label}</span>
-      <span className="max-w-[62%] break-words text-right text-sm font-semibold text-slate-100">{value || 'unknown'}</span>
+      <span className="max-w-[62%] break-words text-right text-sm font-semibold text-slate-100">{value || 'nomaʼlum'}</span>
     </div>
   );
 }
@@ -40,11 +41,11 @@ export default function ServicePanel() {
 
   const systemRows = useMemo(
     () => [
-      ['Application Version', info?.appVersion],
-      ['Database Location', info?.databasePath],
-      ['SQLite Size', formatBytes(info?.sqliteSize ?? info?.databaseSize)],
-      ['Build Version', info?.buildVersion],
-      ['Electron Version', info?.electronVersion || 'not detected'],
+      ['Dastur versiyasi', info?.appVersion],
+      ['Baza joylashuvi', info?.databasePath],
+      ['SQLite hajmi', formatBytes(info?.sqliteSize ?? info?.databaseSize)],
+      ['Build versiyasi', info?.buildVersion],
+      ['Electron versiyasi', info?.electronVersion || 'aniqlanmadi'],
     ],
     [info],
   );
@@ -55,14 +56,14 @@ export default function ServicePanel() {
   };
 
   useEffect(() => {
-    loadInfo().catch(() => toast.error('Service maвЂ™lumotlarini olishda xatolik'));
+    loadInfo().catch(() => toast.error('Service maʼlumotlarini olishda xatolik'));
   }, []);
 
   const handleLogout = async () => {
     try {
       await logoutRequest().unwrap();
     } catch {
-      // Local logout is enough if the API is temporarily unavailable.
+      // Network bo'lmasa ham lokal chiqish interfeysni himoya qiladi.
     }
     dispatch(logout());
     navigate('/login', { replace: true });
@@ -71,7 +72,7 @@ export default function ServicePanel() {
   const createOrUpdate = async (event) => {
     event.preventDefault();
     if (!form.fullName.trim() || !form.username.trim() || form.password.length < 6) {
-      toast.error('Customer name, username va kamida 6 belgili parol kerak');
+      toast.error('Mijoz ismi, login va kamida 6 belgili parol kerak');
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -83,7 +84,7 @@ export default function ServicePanel() {
     try {
       await apiClient.post('/service/customer', form);
       setForm((current) => ({ ...current, password: '', confirmPassword: '' }));
-      toast.success('Customer account yaratildi yoki yangilandi');
+      toast.success('Mijoz akkaunti yaratildi yoki yangilandi');
     } finally {
       setIsSavingCustomer(false);
     }
@@ -92,7 +93,7 @@ export default function ServicePanel() {
   const reset = async (event) => {
     event.preventDefault();
     if (resetPassword.length < 6) {
-      toast.error('Yangi parol kamida 6 ta belgi boвЂlishi kerak');
+      toast.error('Yangi parol kamida 6 ta belgi bo‘lishi kerak');
       return;
     }
 
@@ -100,7 +101,7 @@ export default function ServicePanel() {
     try {
       await apiClient.post('/service/customer/reset-password', { newPassword: resetPassword });
       setResetPassword('');
-      toast.success('Customer paroli yangilandi');
+      toast.success('Mijoz paroli yangilandi');
     } finally {
       setIsResetting(false);
     }
@@ -118,7 +119,7 @@ export default function ServicePanel() {
       anchor.click();
       anchor.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Database export qilindi');
+      toast.success('Baza export qilindi');
     } finally {
       setIsExporting(false);
     }
@@ -134,7 +135,7 @@ export default function ServicePanel() {
     try {
       await apiClient.post('/service/backup/import', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
       await loadInfo();
-      toast.success('Database import qilindi');
+      toast.success('Baza import qilindi');
     } finally {
       setIsImporting(false);
       event.target.value = '';
@@ -146,7 +147,7 @@ export default function ServicePanel() {
       <header className="border-b border-white/10 bg-slate-950/90 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-rose-300">Developer Maintenance</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-rose-300">Dasturchi xizmati</p>
             <h1 className="mt-1 text-2xl font-bold">Service Panel</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -156,7 +157,7 @@ export default function ServicePanel() {
             </div>
             <Button variant="secondary" onClick={handleLogout} title="Chiqish">
               <LogOut className="h-4 w-4" />
-              Logout
+              Chiqish
             </Button>
           </div>
         </div>
@@ -169,24 +170,23 @@ export default function ServicePanel() {
               <UserCog className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold">Customer Account</h2>
-              <p className="text-sm text-slate-500">Create or update the shop owner login.</p>
+              <h2 className="text-lg font-bold">Mijoz akkaunti</h2>
+              <p className="text-sm text-slate-500">Do‘kon egasi uchun login va parol yarating yoki yangilang.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
-            <Input label="Customer name" placeholder="Customer name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-            <Input label="Username" placeholder="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-            <Input label="Password" type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-            <Input
-              label="Confirm password"
-              type="password"
-              placeholder="Confirm password"
+            <Input label="Mijoz ismi" placeholder="Mijoz ismi" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+            <Input label="Login" placeholder="Login" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+            <PasswordInput label="Parol" placeholder="Parol" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <PasswordInput
+              label="Parolni takrorlang"
+              placeholder="Parolni takrorlang"
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
             />
             <Button loading={isSavingCustomer} className="w-full" type="submit">
               <UserCog className="h-4 w-4" />
-              Create / Update Customer Account
+              Mijoz akkauntini yaratish / yangilash
             </Button>
           </div>
         </form>
@@ -197,21 +197,20 @@ export default function ServicePanel() {
               <KeyRound className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold">Reset Customer Password</h2>
-              <p className="text-sm text-slate-500">Force password change on next customer login.</p>
+              <h2 className="text-lg font-bold">Mijoz parolini tiklash</h2>
+              <p className="text-sm text-slate-500">Keyingi kirishda mijoz parolni almashtirishga majbur bo‘ladi.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
-            <Input
-              label="New Password"
-              type="password"
-              placeholder="New Password"
+            <PasswordInput
+              label="Yangi parol"
+              placeholder="Yangi parol"
               value={resetPassword}
               onChange={(e) => setResetPassword(e.target.value)}
             />
             <Button loading={isResetting} className="w-full" type="submit">
               <KeyRound className="h-4 w-4" />
-              Reset Password
+              Parolni tiklash
             </Button>
           </div>
         </form>
@@ -222,8 +221,8 @@ export default function ServicePanel() {
               <MonitorCog className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold">System Information</h2>
-              <p className="text-sm text-slate-500">Runtime and database diagnostics.</p>
+              <h2 className="text-lg font-bold">Tizim maʼlumotlari</h2>
+              <p className="text-sm text-slate-500">Dastur, baza va ishga tushish muhiti holati.</p>
             </div>
           </div>
           <div className="mt-4 rounded-lg border border-white/10 bg-slate-950/60 px-4">
@@ -237,24 +236,24 @@ export default function ServicePanel() {
               <DatabaseBackup className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold">Backup</h2>
-              <p className="text-sm text-slate-500">Export or replace the local SQLite database.</p>
+              <h2 className="text-lg font-bold">Zaxira nusxa</h2>
+              <p className="text-sm text-slate-500">Mahalliy SQLite bazasini export/import qilish.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Button loading={isExporting} onClick={exportDb} type="button">
               <Download className="h-4 w-4" />
-              Export Database
+              Bazani export qilish
             </Button>
             <Button loading={isImporting} variant="secondary" onClick={() => fileInputRef.current?.click()} type="button">
               <Upload className="h-4 w-4" />
-              Import Database
+              Bazani import qilish
             </Button>
             <input ref={fileInputRef} type="file" className="hidden" accept=".sqlite,.db,.database,application/octet-stream" onChange={importDb} />
           </div>
           <div className="mt-5 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-400">
             <HardDrive className="h-4 w-4 text-rose-300" />
-            Imported databases are migrated automatically when loaded.
+            Import qilingan bazalar avtomatik migratsiyadan o‘tadi.
           </div>
         </section>
       </main>
