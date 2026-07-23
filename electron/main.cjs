@@ -269,6 +269,10 @@ function startBackend() {
   });
 }
 
+function appIconPath() {
+  return rootPath('assets', 'icon.ico');
+}
+
 async function createWindow() {
   logMain('createWindow');
   mainWindow = new BrowserWindow({
@@ -277,6 +281,7 @@ async function createWindow() {
     minWidth: 1100,
     minHeight: 720,
     title: 'Dinora Gullari',
+    icon: appIconPath(),
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

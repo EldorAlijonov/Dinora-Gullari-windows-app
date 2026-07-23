@@ -1,6 +1,6 @@
 {
   "name": "dinora-gullari-windows",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Dinora Gullari lokal Windows desktop dasturi.",
   "author": "Eldor Alijonov",
   "repository": {
@@ -41,6 +41,10 @@
     ],
     "extraResources": [
       {
+        "from": "assets/icon.ico",
+        "to": "assets/icon.ico"
+      },
+      {
         "from": "runtime/node.exe",
         "to": "runtime/node.exe"
       },
@@ -62,6 +66,7 @@
       }
     ],
     "win": {
+      "icon": "assets/icon.ico",
       "signExecutable": false,
       "verifyUpdateCodeSignature": false,
       "target": [
