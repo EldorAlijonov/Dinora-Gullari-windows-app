@@ -79,7 +79,7 @@ export class OrdersService {
       id,
       customerName: dto.customerName,
       phone: normalizePhone(dto.phone),
-      telegramPhone: normalizePhone(dto.telegramPhone),
+      telegramPhone: dto.telegramPhone ? normalizePhone(dto.telegramPhone) : '',
       orderText: dto.orderText,
       totalAmount,
       prepaidAmount,
@@ -137,7 +137,11 @@ export class OrdersService {
       [
         dto.customerName ?? current.customerName,
         dto.phone ? normalizePhone(dto.phone) : current.phone,
-        dto.telegramPhone ? normalizePhone(dto.telegramPhone) : current.telegramPhone,
+        Object.prototype.hasOwnProperty.call(dto, 'telegramPhone')
+          ? dto.telegramPhone
+            ? normalizePhone(dto.telegramPhone)
+            : ''
+          : current.telegramPhone,
         dto.orderText ?? current.orderText,
         totalAmount,
         prepaidAmount,
@@ -177,7 +181,7 @@ export class OrdersService {
   async payDebt(id: string, dto: PayOrderDebtDto, userId: string) {
     const order = await this.findOne(id);
     if (order.debtAmount <= 0) throw new BadRequestException('Ushbu buyurtmada qarz mavjud emas');
-    if (dto.amount > order.debtAmount) throw new BadRequestException('Tolov qolgan qarzdan katta bolishi mumkin emas');
+    if (dto.amount > order.debtAmount) throw new BadRequestException('To‘lov qolgan qarzdan katta bo‘lishi mumkin emas');
 
     const payments = [
       ...order.payments,
@@ -282,7 +286,7 @@ export class OrdersService {
   private bulkDeleteFilter(dto: BulkDeleteDto) {
     if (dto.scope === 'selected') {
       const ids = dto.ids || [];
-      if (ids.length === 0) throw new BadRequestException("O'chirish uchun yozuv tanlanmagan");
+      if (ids.length === 0) throw new BadRequestException('O‘chirish uchun yozuv tanlanmagan');
       return { where: `WHERE id IN (${ids.map(() => '?').join(', ')})`, params: ids };
     }
     const { start, end } = this.deleteDateRange(dto);
@@ -294,15 +298,15 @@ export class OrdersService {
       if (!dto.dateFrom || !dto.dateTo) throw new BadRequestException('Boshlanish va tugash sanalarini tanlang');
       const start = new Date(dto.dateFrom);
       const end = new Date(dto.dateTo);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new BadRequestException("Sana noto'g'ri kiritilgan");
-      if (start > end) throw new BadRequestException('Boshlanish sanasi tugash sanasidan keyin bolishi mumkin emas');
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new BadRequestException('Sana noto‘g‘ri kiritilgan');
+      if (start > end) throw new BadRequestException('Boshlanish sanasi tugash sanasidan keyin bo‘lishi mumkin emas');
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
       return { start, end };
     }
 
     const anchor = dto.anchorDate ? new Date(dto.anchorDate) : new Date();
-    if (Number.isNaN(anchor.getTime())) throw new BadRequestException("Sana noto'g'ri kiritilgan");
+    if (Number.isNaN(anchor.getTime())) throw new BadRequestException('Sana noto‘g‘ri kiritilgan');
     const start = new Date(anchor);
     const end = new Date(anchor);
     start.setHours(0, 0, 0, 0);

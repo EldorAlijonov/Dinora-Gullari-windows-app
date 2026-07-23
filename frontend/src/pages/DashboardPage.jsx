@@ -207,7 +207,7 @@ export default function DashboardPage() {
     {
       title: 'Umumiy savdo summasi',
       value: formatCurrency(stats.totalTrade || 0),
-      description: 'Gul buyurtmalari va sovg‘a/tovar sotuvlari jami.',
+      description: 'Gul buyurtmalari va sovgâ€˜a/tovar sotuvlari jami.',
       icon: Banknote,
       accent: accents.blue,
       to: '/reports',
@@ -215,15 +215,15 @@ export default function DashboardPage() {
     {
       title: 'Gullardan tushum',
       value: formatCurrency(stats.flowerRevenue || 0),
-      description: 'Gul buyurtmalaridan kelib tushgan to‘lovlar.',
+      description: 'Gul buyurtmalaridan kelib tushgan toâ€˜lovlar.',
       icon: TrendingUp,
       accent: accents.rose,
       to: '/orders',
     },
     {
-      title: 'Sovg‘a/tovarlardan tushum',
+      title: 'Sovgâ€˜a/tovarlardan tushum',
       value: formatCurrency(stats.giftRevenue || 0),
-      description: 'Nasiyadan tashqari sovg‘a va tovar sotuvlari tushumi.',
+      description: 'Nasiyadan tashqari sovgâ€˜a va tovar sotuvlari tushumi.',
       icon: Gift,
       accent: accents.emerald,
       to: '/sales',
@@ -242,7 +242,7 @@ export default function DashboardPage() {
     {
       title: 'Bugun olib ketiladi',
       value: stats.pickupToday || 0,
-      description: 'Bugun mijozga topshirilishi kerak bo‘lgan buyurtmalar.',
+      description: 'Bugun mijozga topshirilishi kerak boâ€˜lgan buyurtmalar.',
       icon: Clock3,
       accent: accents.amber,
       to: '/orders?filter=pickup_today',
@@ -342,7 +342,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="space-y-3">
-            <SectionTitle title="Bugungi ishlar" description="Admin kun davomida nazorat qilishi kerak bo‘lgan asosiy holatlar." />
+            <SectionTitle title="Bugungi ishlar" description="Admin kun davomida nazorat qilishi kerak boâ€˜lgan asosiy holatlar." />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {operationCards.map((item) => (
                 <DashboardStatCard key={item.title} {...item} onClick={() => navigateFromDashboard(item.to)} />
@@ -360,7 +360,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="space-y-3">
-            <SectionTitle title="Tezkor ro'yxatlar" description="Bugun ishlash kerak bo‘lgan buyurtmalar ro‘yxati." />
+            <SectionTitle title="Tezkor ro'yxatlar" description="Bugun ishlash kerak boâ€˜lgan buyurtmalar roâ€˜yxati." />
             <div className="grid gap-4 xl:grid-cols-2">
               <DashboardOrderList
                 title="Bugun olib ketiladigan buyurtmalar"
@@ -447,7 +447,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="space-y-3">
-            <SectionTitle title="Grafiklar" description="Trendlarni ko‘rish uchun qisqa tahlil." />
+            <SectionTitle title="Grafiklar" description="Trendlarni koâ€˜rish uchun qisqa tahlil." />
             <DashboardCharts charts={data?.charts} />
           </section>
         </>
@@ -461,14 +461,14 @@ export default function DashboardPage() {
             <p className="mt-2 text-2xl font-bold text-rose-100">{formatCurrency(stats.debtBreakdown?.flowers || 0)}</p>
           </div>
           <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 p-4">
-            <p className="text-sm font-semibold text-slate-400">Sovg‘a/tovarlardan nasiya savdo</p>
+            <p className="text-sm font-semibold text-slate-400">Sovgâ€˜a/tovarlardan nasiya savdo</p>
             <p className="mt-2 text-2xl font-bold text-emerald-100">{formatCurrency(stats.debtBreakdown?.gifts || 0)}</p>
           </div>
           <div className="rounded-lg border border-white/10 bg-slate-950/35 p-4">
             <p className="text-sm font-semibold text-slate-400">Jami nasiya</p>
             <p className="mt-2 text-3xl font-bold text-slate-100">{formatCurrency(stats.debtBreakdown?.total || 0)}</p>
           </div>
-          <Button className="w-full" onClick={() => navigate('/debts', { state: dashboardReturnState })}>Qarzdorlik sahifasiga o‘tish</Button>
+          <Button className="w-full" onClick={() => navigate('/debts', { state: dashboardReturnState })}>Qarzdorlik sahifasiga oâ€˜tish</Button>
         </div>
       </Modal>
     </div>

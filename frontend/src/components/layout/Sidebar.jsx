@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 const nav = [
   { to: '/', label: 'Dashboard', icon: Home },
   { to: '/orders', label: 'Gul buyurtmalari', icon: ShoppingBag },
-  { to: '/sales', label: 'Sovg‘a/tovarlar', icon: ReceiptText },
+  { to: '/sales', label: 'Sovgâ€˜a/tovarlar', icon: ReceiptText },
   { to: '/debts', label: 'Qarzlar', icon: WalletCards },
   { to: '/archive', label: 'Tarix', icon: CalendarDays },
   { to: '/reports', label: 'Hisobotlar', icon: BarChart3 },

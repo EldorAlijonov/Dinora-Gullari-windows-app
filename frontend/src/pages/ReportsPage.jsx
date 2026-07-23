@@ -26,7 +26,7 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Hisobotlar"
-        description="Gul buyurtmalari va sovg‘a/tovar sotuvlari bo‘yicha tahlil."
+        description="Gul buyurtmalari va sovgâ€˜a/tovar sotuvlari boâ€˜yicha tahlil."
         action={returnTo && (
           <Button variant="secondary" onClick={() => navigate(returnTo)}>
             <ChevronLeft className="h-4 w-4" />
@@ -42,7 +42,7 @@ export default function ReportsPage() {
         <ReportLine title="Yillik foyda" data={mapProfit(yearly.data)} />
 
         <Card>
-          <h2 className="mb-4 text-lg font-bold">To‘lov turi bo‘yicha sotuv</h2>
+          <h2 className="mb-4 text-lg font-bold">Toâ€˜lov turi boâ€˜yicha sotuv</h2>
           <div className="h-72">
             <ResponsiveContainer>
               <PieChart>
@@ -56,7 +56,7 @@ export default function ReportsPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-lg font-bold">Eng ko‘p qarzdor mijozlar</h2>
+          <h2 className="mb-4 text-lg font-bold">Eng koâ€˜p qarzdor mijozlar</h2>
           {overview.data?.topDebtors?.length ? (
             <div className="space-y-3">
               {overview.data.topDebtors.map((item) => (

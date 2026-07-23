@@ -9,8 +9,9 @@ export class CreateOrderDto {
   @IsString()
   phone: string;
 
+  @IsOptional()
   @IsString()
-  telegramPhone: string;
+  telegramPhone?: string;
 
   @IsString()
   orderText: string;

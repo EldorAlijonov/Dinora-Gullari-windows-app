@@ -20,7 +20,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-white/10 py-3 last:border-b-0">
       <span className="text-sm text-slate-400">{label}</span>
-      <span className="max-w-[62%] break-words text-right text-sm font-semibold text-slate-100">{value || 'nomaʼlum'}</span>
+      <span className="max-w-[62%] break-words text-right text-sm font-semibold text-slate-100">{value || 'noma‘lum'}</span>
     </div>
   );
 }
@@ -56,7 +56,7 @@ export default function ServicePanel() {
   };
 
   useEffect(() => {
-    loadInfo().catch(() => toast.error('Service maʼlumotlarini olishda xatolik'));
+    loadInfo().catch(() => toast.error('Service ma‘lumotlarini olishda xatolik'));
   }, []);
 
   const handleLogout = async () => {
@@ -93,7 +93,7 @@ export default function ServicePanel() {
   const reset = async (event) => {
     event.preventDefault();
     if (resetPassword.length < 6) {
-      toast.error('Yangi parol kamida 6 ta belgi bo�lishi kerak');
+      toast.error('Yangi parol kamida 6 ta belgi bo‘lishi kerak');
       return;
     }
 
@@ -171,7 +171,7 @@ export default function ServicePanel() {
             </span>
             <div>
               <h2 className="text-lg font-bold">Mijoz akkaunti</h2>
-              <p className="text-sm text-slate-500">Do�kon egasi uchun login va parol yarating yoki yangilang.</p>
+              <p className="text-sm text-slate-500">Do‘kon egasi uchun login va parol yarating yoki yangilang.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
@@ -198,7 +198,7 @@ export default function ServicePanel() {
             </span>
             <div>
               <h2 className="text-lg font-bold">Mijoz parolini tiklash</h2>
-              <p className="text-sm text-slate-500">Keyingi kirishda mijoz parolni almashtirishga majbur bo�ladi.</p>
+              <p className="text-sm text-slate-500">Keyingi kirishda mijoz parolni almashtirishga majbur bo‘ladi.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
@@ -221,7 +221,7 @@ export default function ServicePanel() {
               <MonitorCog className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold">Tizim maʼlumotlari</h2>
+              <h2 className="text-lg font-bold">Tizim ma‘lumotlari</h2>
               <p className="text-sm text-slate-500">Dastur, baza va ishga tushish muhiti holati.</p>
             </div>
           </div>
@@ -253,7 +253,7 @@ export default function ServicePanel() {
           </div>
           <div className="mt-5 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-400">
             <HardDrive className="h-4 w-4 text-rose-300" />
-            Import qilingan bazalar avtomatik migratsiyadan o�tadi.
+            Import qilingan bazalar avtomatik migratsiyadan o‘tadi.
           </div>
         </section>
       </main>

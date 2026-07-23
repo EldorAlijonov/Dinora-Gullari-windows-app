@@ -28,7 +28,7 @@ function isUnauthorized(error) {
 }
 
 function reportError(error) {
-  if (!isUnauthorized(error)) toast.error('Xatolik yuz berdi. Qayta urinib ko‘ring');
+  if (!isUnauthorized(error)) toast.error('Xatolik yuz berdi. Qayta urinib koâ€˜ring');
 }
 
 export default function OrdersPage() {
@@ -134,7 +134,7 @@ export default function OrdersPage() {
   const confirmDelete = async () => {
     try {
       await deleteOrder(deletingOrder._id).unwrap();
-      toast.success('Buyurtma o‘chirildi');
+      toast.success('Buyurtma oâ€˜chirildi');
       setDeletingOrder(null);
       refetch();
     } catch (error) {
@@ -174,7 +174,7 @@ export default function OrdersPage() {
 
       {highlightId && (
         <div className="rounded-lg border border-amber-300/20 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">
-          Qarzdorlikdan ochilgan buyurtma ajratib ko‘rsatiladi.
+          Qarzdorlikdan ochilgan buyurtma ajratib koâ€˜rsatiladi.
         </div>
       )}
 
@@ -203,7 +203,7 @@ export default function OrdersPage() {
       <ConfirmModal
         open={Boolean(pendingSubmit)}
         title={editingOrder ? 'Buyurtmani yangilash' : 'Buyurtmani saqlash'}
-        description={editingOrder ? 'Ushbu gul buyurtmasidagi o‘zgarishlarni saqlashni tasdiqlaysizmi?' : 'Yangi gul buyurtmasini saqlashni tasdiqlaysizmi?'}
+        description={editingOrder ? 'Ushbu gul buyurtmasidagi oâ€˜zgarishlarni saqlashni tasdiqlaysizmi?' : 'Yangi gul buyurtmasini saqlashni tasdiqlaysizmi?'}
         loading={createState.isLoading || updateState.isLoading}
         onClose={() => setPendingSubmit(null)}
         onConfirm={confirmSubmitOrder}

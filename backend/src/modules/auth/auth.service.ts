@@ -16,7 +16,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.usersService.findByLogin(dto.login);
     if (!user?.password || !(await bcrypt.compare(dto.password, user.password))) {
-      throw new UnauthorizedException('Login yoki parol noto‘g‘ri');
+      throw new UnauthorizedException('Login yoki parol notoâ€˜gâ€˜ri');
     }
 
     const payload = { sub: user.id, userId: user.id, username: user.username, role: user.role };

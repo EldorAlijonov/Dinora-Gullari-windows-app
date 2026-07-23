@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 const titles = {
   '/': 'Dashboard',
   '/orders': 'Gul buyurtmalari',
-  '/sales': 'Sovg‘a/tovarlar',
+  '/sales': 'Sovgâ€˜a/tovarlar',
   '/debts': 'Qarzdorlik',
   '/reports': 'Hisobotlar',
   '/settings': 'Sozlamalar',
@@ -53,7 +53,7 @@ const toneStyles = {
     action: 'border-emerald-200/20 bg-emerald-950/80 text-emerald-100',
   },
   info: {
-    label: 'Ma?lumot',
+    label: 'Maâ€˜lumot',
     toast: 'border-sky-300/30 bg-sky-950/95 text-sky-50',
     toastAccent: 'bg-sky-300',
     item: 'border-sky-300/25 bg-sky-400/10 hover:bg-sky-400/15',
@@ -149,7 +149,7 @@ export function Topbar({ collapsed, onToggleSidebar, onOpenMobile }) {
       navigate(item.url, {
         state: {
           returnTo,
-          returnLabel: returnTo === '/' ? 'Dashboardga qaytish' : 'Avvalgi bo‘limga qaytish',
+          returnLabel: returnTo === '/' ? 'Dashboardga qaytish' : 'Avvalgi boâ€˜limga qaytish',
         },
       });
     }
@@ -159,7 +159,7 @@ export function Topbar({ collapsed, onToggleSidebar, onOpenMobile }) {
         setDismissedNotificationIds((current) => new Set(current).add(item.id));
         refetchNotifications();
       } catch {
-        toast.error('Bildirishnomani ro‘yxatdan olishda xatolik');
+        toast.error('Bildirishnomani roâ€˜yxatdan olishda xatolik');
       }
     }
     setNotificationsOpen(false);
@@ -306,7 +306,7 @@ export function Topbar({ collapsed, onToggleSidebar, onOpenMobile }) {
               <div className="max-h-[70vh] overflow-y-auto p-2">
                 {visibleNotifications.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-white/10 p-6 text-center text-sm text-slate-500">
-                    Hozircha bildirishnoma yo‘q
+                    Hozircha bildirishnoma yoâ€˜q
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -335,7 +335,7 @@ export function Topbar({ collapsed, onToggleSidebar, onOpenMobile }) {
                                 <span>{formatDate(item.createdAt)}</span>
                               </div>
                               <div className={`mt-3 inline-flex rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${styles.action}`}>
-                                {item.url ? 'Ko‘rish va bartaraf etish' : 'Ro‘yxatdan olish'}
+                                {item.url ? 'Koâ€˜rish va bartaraf etish' : 'Roâ€˜yxatdan olish'}
                               </div>
                             </div>
                           </div>

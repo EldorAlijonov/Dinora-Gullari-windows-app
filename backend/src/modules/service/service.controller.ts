@@ -58,7 +58,7 @@ export class ServiceController {
   @Post('customer/reset-password')
   async resetCustomerPassword(@Body() body: { newPassword?: string }) {
     if (!body.newPassword || body.newPassword.length < 6) {
-      throw new BadRequestException('Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak');
+      throw new BadRequestException('Yangi parol kamida 6 ta belgidan iborat boâ€˜lishi kerak');
     }
     const existingAdmin = this.users.findAdmin();
     if (!existingAdmin) throw new NotFoundException('Mijoz akkaunti topilmadi');
