@@ -1,12 +1,13 @@
 import { Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { Input } from './Input';
 
-export function PasswordInput({ visibleLabel = "Ko'rish", hiddenLabel = 'Yashirish', ...props }) {
+export const PasswordInput = forwardRef(function PasswordInput({ visibleLabel = "Ko'rish", hiddenLabel = 'Yashirish', ...props }, ref) {
   const [visible, setVisible] = useState(false);
 
   return (
     <Input
+      ref={ref}
       {...props}
       type={visible ? 'text' : 'password'}
       rightElement={
@@ -22,4 +23,4 @@ export function PasswordInput({ visibleLabel = "Ko'rish", hiddenLabel = 'Yashiri
       }
     />
   );
-}
+});
