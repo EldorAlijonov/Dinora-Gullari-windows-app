@@ -18,7 +18,7 @@ export default function ChangePasswordPage() {
 
   const submit = async () => {
     if (next.length < 6) {
-      toast.error('Yangi parol kamida 6 ta belgidan iborat boâ€˜lishi kerak');
+      toast.error('Yangi parol kamida 6 ta belgidan iborat bo‘lishi kerak');
       return;
     }
     if (next !== confirm) {

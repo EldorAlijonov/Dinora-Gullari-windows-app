@@ -12,9 +12,9 @@ import { Textarea } from '../ui/Textarea';
 import { orderStatuses } from './StatusBadge';
 
 const requiredText = 'Ushbu maydon majburiy';
-const minNumberText = 'Qiymat 0 dan kichik boâ€˜lmasligi kerak';
-const invalidPhoneText = 'Telefon raqam notoâ€˜gâ€˜ri kiritildi';
-const pastDateText = 'Oâ€˜tib ketgan sanaga buyurtma qoâ€˜shib boâ€˜lmaydi';
+const minNumberText = 'Qiymat 0 dan kichik bo‘lmasligi kerak';
+const invalidPhoneText = 'Telefon raqam noto‘g‘ri kiritildi';
+const pastDateText = 'O‘tib ketgan sanaga buyurtma qo‘shib bo‘lmaydi';
 
 const numberField = z.preprocess(
   (value) => (value === '' || value === null || value === undefined ? 0 : Number(value)),

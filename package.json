@@ -1,6 +1,6 @@
 {
   "name": "dinora-gullari-windows",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Dinora Gullari lokal Windows desktop dasturi.",
   "author": "Eldor Alijonov",
   "repository": {
@@ -17,8 +17,8 @@
     "build:frontend": "cross-env VITE_DESKTOP=true VITE_API_URL=http://127.0.0.1:5000 npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
     "desktop": "npm run build && electron .",
-    "dist:win": "npm run runtime:node && npm run build && npm --prefix backend prune --omit=dev && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= CSC_LINK= electron-builder --win nsis --x64 --publish never",
-    "publish:win": "npm run runtime:node && npm run build && npm --prefix backend prune --omit=dev && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false WIN_CSC_LINK= CSC_LINK= electron-builder --win nsis --x64 --publish always"
+    "dist:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-win.ps1",
+    "publish:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-win.ps1 -Publish"
   },
   "build": {
     "appId": "uz.dinora.gullari.desktop",

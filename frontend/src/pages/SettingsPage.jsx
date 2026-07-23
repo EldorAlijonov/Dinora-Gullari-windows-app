@@ -144,10 +144,10 @@ function normalizeGooglePrivateKey(value) {
 
 function cleanSettingsForSave(settings, { clearTelegramBotToken = false } = {}) {
   const {
-    key,
-    createdAt,
-    updatedAt,
-    telegramBotConfigured,
+    key: _key,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    telegramBotConfigured: _telegramBotConfigured,
     telegramBotToken,
     ...payload
   } = settings;

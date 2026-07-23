@@ -27,8 +27,8 @@ const paymentTypes = [
 ];
 
 const schema = z.object({
-  amount: z.coerce.number().min(1, 'Toâ€˜lov miqdori 0 dan katta boâ€˜lishi kerak'),
-  paymentType: z.string().min(1, 'Toâ€˜lov turini tanlang'),
+  amount: z.coerce.number().min(1, 'To‘lov miqdori 0 dan katta bo‘lishi kerak'),
+  paymentType: z.string().min(1, 'To‘lov turini tanlang'),
 });
 
 function debtTargetUrl(debt) {
@@ -94,7 +94,7 @@ export default function DebtsPage() {
   }, [data]);
 
   useEffect(() => {
-    if (isError) toast.error('Qarzdorlik maâ€™lumotlarini yuklashda xatolik');
+    if (isError) toast.error('Qarzdorlik ma?lumotlarini yuklashda xatolik');
   }, [isError]);
 
   const openPayment = (debt) => {
@@ -104,7 +104,7 @@ export default function DebtsPage() {
 
   const submitPayment = async (values) => {
     if (Number(values.amount) > paying.debtAmount) {
-      form.setError('amount', { message: 'Toâ€˜lov qolgan qarzdan katta boâ€˜lishi mumkin emas' });
+      form.setError('amount', { message: 'To‘lov qolgan qarzdan katta bo‘lishi mumkin emas' });
       return;
     }
     setPendingPayment({ debt: paying, values });
@@ -115,12 +115,12 @@ export default function DebtsPage() {
       const { debt, values } = pendingPayment;
       const payload = { id: debt._id, amount: Number(values.amount), paymentType: values.paymentType };
       const result = debt.debtSource === 'gift' ? await paySaleDebt(payload).unwrap() : await payOrderDebt(payload).unwrap();
-      toast.success(result.debtAmount === 0 ? 'Qarzdorlik toâ€˜liq yopildi' : 'Toâ€˜lov muvaffaqiyatli qabul qilindi');
+      toast.success(result.debtAmount === 0 ? 'Qarzdorlik to‘liq yopildi' : 'To‘lov muvaffaqiyatli qabul qilindi');
       setPendingPayment(null);
       setPaying(null);
       refetch();
     } catch {
-      toast.error('Xatolik yuz berdi. Qayta urinib koâ€˜ring');
+      toast.error('Xatolik yuz berdi. Qayta urinib ko‘ring');
     }
   };
 
@@ -139,7 +139,7 @@ export default function DebtsPage() {
       toast.success('Telegram eslatma yuborildi');
       setPendingReminder(null);
     } catch {
-      toast.error('Xatolik yuz berdi. Qayta urinib koâ€˜ring');
+      toast.error('Xatolik yuz berdi. Qayta urinib ko‘ring');
     } finally {
       setIsSendingReminder(false);
     }
@@ -170,7 +170,7 @@ export default function DebtsPage() {
     if (!telegramEnabled) return;
     const debts = mode === 'all' ? remindableDebts : selectedDebts;
     if (debts.length === 0) {
-      toast.error(mode === 'all' ? 'Eslatma yuboriladigan aktiv qarzdor yoÐ²Ð‚Â˜q' : 'Avval qarzdorlarni tanlang');
+      toast.error(mode === 'all' ? 'Eslatma yuboriladigan aktiv qarzdor yo‘q' : 'Avval qarzdorlarni tanlang');
       return;
     }
     setPendingBulkReminder({ mode, debts });
@@ -185,7 +185,7 @@ export default function DebtsPage() {
       setPendingBulkReminder(null);
       if (pendingBulkReminder?.mode === 'selected') clearSelection();
     } catch {
-      toast.error('BaÐ²Ð‚â„¢zi eslatmalar yuborilmadi. Qayta urinib koÐ²Ð‚Â˜ring');
+      toast.error('Ba?zi eslatmalar yuborilmadi. Qayta urinib ko‘ring');
     } finally {
       setIsSendingReminder(false);
     }
@@ -197,7 +197,7 @@ export default function DebtsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Qarzdorlik"
-        description="Gul buyurtmalari va sovgâ€˜a/tovar nasiyalari boâ€˜yicha umumiy qarzdorlik."
+        description="Gul buyurtmalari va sovg‘a/tovar nasiyalari bo‘yicha umumiy qarzdorlik."
         action={returnTo && (
           <Button variant="secondary" onClick={() => navigate(returnTo)}>
             <ChevronLeft className="h-4 w-4" />
@@ -212,7 +212,7 @@ export default function DebtsPage() {
           <p className="mt-2 text-2xl font-bold text-slate-100">{stats?.active || 0}</p>
         </Card>
         <Card>
-          <p className="text-sm font-semibold text-slate-400">Gul / sovgâ€˜a qarzi</p>
+          <p className="text-sm font-semibold text-slate-400">Gul / sovg‘a qarzi</p>
           <p className="mt-2 text-lg font-bold text-slate-100">{formatCurrency(stats?.flowersDebt || 0)} / {formatCurrency(stats?.giftsDebt || 0)}</p>
         </Card>
         <Card>
@@ -245,14 +245,14 @@ export default function DebtsPage() {
               <option value="paid">Yopilgan</option>
             </Select>
             <Select value={params.source || 'all'} onChange={(event) => setParams((current) => ({ ...current, source: event.target.value }))}>
-              <option value="all">Umumiy roâ€˜yxat</option>
+              <option value="all">Umumiy ro‘yxat</option>
               <option value="flower">Faqat gul buyurtmalari</option>
-              <option value="gift">Faqat sovgâ€˜a/tovarlar</option>
+              <option value="gift">Faqat sovg‘a/tovarlar</option>
             </Select>
           </div>
 
           <div className="flex rounded-lg border border-white/10 bg-slate-950/30 p-1">
-            <Button variant={viewMode === 'table' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('table')}><List className="h-4 w-4" /> Roâ€˜yxat</Button>
+            <Button variant={viewMode === 'table' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('table')}><List className="h-4 w-4" /> Ro‘yxat</Button>
             <Button variant={viewMode === 'card' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('card')}><Grid2X2 className="h-4 w-4" /> Card</Button>
           </div>
         </div>
@@ -294,33 +294,33 @@ export default function DebtsPage() {
 
       <DebtDetailsModal debt={viewing} onClose={() => setViewing(null)} onPay={openPayment} telegramEnabled={telegramEnabled} />
 
-      <Modal open={Boolean(paying)} title="Qarzga toâ€˜lov kiritish" onClose={() => setPaying(null)} maxWidth="max-w-md">
+      <Modal open={Boolean(paying)} title="Qarzga to‘lov kiritish" onClose={() => setPaying(null)} maxWidth="max-w-md">
         <form onSubmit={form.handleSubmit(submitPayment)} className="space-y-4">
           <div className="rounded-lg border border-amber-300/20 bg-amber-400/10 p-3">
             <p className="text-sm text-slate-300">Qolgan qarz</p>
             <p className="mt-1 text-xl font-bold text-amber-100">{formatCurrency(paying?.debtAmount || 0)}</p>
           </div>
-          <Input label="Toâ€˜lov summasi" type="number" min="1" error={form.formState.errors.amount?.message} {...form.register('amount')} />
+          <Input label="To‘lov summasi" type="number" min="1" error={form.formState.errors.amount?.message} {...form.register('amount')} />
           <div className={`rounded-lg border p-3 ${paymentTooMuch ? 'border-rose-300/30 bg-rose-400/10' : remainingAfterPayment > 0 ? 'border-amber-300/20 bg-amber-400/10' : 'border-emerald-300/20 bg-emerald-400/10'}`}>
-            <p className="text-sm text-slate-300">Toâ€˜lovdan keyin qoladi</p>
+            <p className="text-sm text-slate-300">To‘lovdan keyin qoladi</p>
             <p className={`mt-1 text-xl font-bold ${paymentTooMuch ? 'text-rose-200' : remainingAfterPayment > 0 ? 'text-amber-100' : 'text-emerald-100'}`}>
-              {paymentTooMuch ? 'Toâ€˜lov qarzdan katta' : formatCurrency(remainingAfterPayment)}
+              {paymentTooMuch ? 'To‘lov qarzdan katta' : formatCurrency(remainingAfterPayment)}
             </p>
           </div>
           <Button type="button" variant="secondary" className="w-full" onClick={() => form.setValue('amount', paying?.debtAmount || 0, { shouldValidate: true })}>
-            Qolgan qarzni toâ€˜liq yopish
+            Qolgan qarzni to‘liq yopish
           </Button>
-          <Select label="Toâ€˜lov turi" error={form.formState.errors.paymentType?.message} {...form.register('paymentType')}>
+          <Select label="To‘lov turi" error={form.formState.errors.paymentType?.message} {...form.register('paymentType')}>
             {paymentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </Select>
-          <Button loading={isPaying} disabled={paymentTooMuch} className="w-full">{isPaying ? 'Saqlanmoqda...' : 'Toâ€˜lovni saqlash'}</Button>
+          <Button loading={isPaying} disabled={paymentTooMuch} className="w-full">{isPaying ? 'Saqlanmoqda...' : 'To‘lovni saqlash'}</Button>
         </form>
       </Modal>
 
       <ConfirmModal
         open={Boolean(pendingPayment)}
-        title="Toâ€˜lovni tasdiqlash"
-        description={`${formatCurrency(Number(pendingPayment?.values?.amount || 0))} miqdoridagi toâ€˜lovni saqlashni tasdiqlaysizmi?`}
+        title="To‘lovni tasdiqlash"
+        description={`${formatCurrency(Number(pendingPayment?.values?.amount || 0))} miqdoridagi to‘lovni saqlashni tasdiqlaysizmi?`}
         loading={isPaying}
         onClose={() => setPendingPayment(null)}
         onConfirm={confirmPayment}
@@ -348,7 +348,7 @@ export default function DebtsPage() {
 }
 
 function SourceBadge({ debt }) {
-  const label = debt.debtSource === 'gift' ? 'Sovgâ€˜a/tovar' : 'Gul';
+  const label = debt.debtSource === 'gift' ? 'Sovg‘a/tovar' : 'Gul';
   return (
     <span className={`inline-flex min-w-[76px] items-center justify-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold ${debt.debtSource === 'gift' ? 'border-sky-300/20 bg-sky-400/10 text-sky-200' : 'border-rose-300/20 bg-rose-400/10 text-rose-200'}`}>
       {label}
@@ -363,7 +363,7 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
         <thead className="text-xs uppercase text-slate-500">
           <tr>
             {telegramEnabled && <th className="px-3 py-3">Tanlash</th>}
-            {['#', 'Turi', 'Mijoz', 'Telefon', 'Nomi', 'Umumiy', 'Toâ€˜langan', 'Qolgan qarz', 'Sana', 'Status', 'Amallar'].map((heading) => (
+            {['#', 'Turi', 'Mijoz', 'Telefon', 'Nomi', 'Umumiy', 'To‘langan', 'Qolgan qarz', 'Sana', 'Status', 'Amallar'].map((heading) => (
               <th key={heading} className="px-3 py-3">{heading}</th>
             ))}
           </tr>
@@ -397,7 +397,7 @@ function DebtsTable({ debts, selectedDebtIds, onToggleSelect, onView, onPay, onR
               <td className="px-3 py-3">{debt.debtSource === 'flower' ? <StatusBadge status={debt.status} /> : <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-xs font-bold text-amber-200">Nasiya</span>}</td>
               <td className="px-3 py-3" onClick={(event) => event.stopPropagation()}>
                 <div className="flex justify-end gap-2">
-                  {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> Toâ€˜lov</Button>}
+                  {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> To‘lov</Button>}
                   {telegramEnabled && debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
                   <Button variant="ghost" onClick={() => navigate(debtTargetUrl(debt), { state: { returnTo, returnLabel: "Qarzlar bo'limiga qaytish" } })} className="px-3"><ExternalLink className="h-4 w-4" /></Button>
                 </div>
@@ -436,11 +436,11 @@ function DebtCard({ debt, index, selected, onToggleSelect, onView, onPay, onRemi
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-slate-950/25 p-3">
         <Info label="Jami" value={formatCurrency(debt.totalAmount)} />
-        <Info label="Toâ€˜langan" value={formatCurrency(debt.paidAmount)} />
+        <Info label="To‘langan" value={formatCurrency(debt.paidAmount)} />
         <Info label="Qarz" value={formatCurrency(debt.debtAmount)} danger />
       </div>
       <div className="mt-4 flex flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
-        {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> Toâ€˜lov</Button>}
+        {debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> To‘lov</Button>}
         {telegramEnabled && debt.debtAmount > 0 && <Button variant="secondary" onClick={() => onRemind(debt)} className="px-3"><Bell className="h-4 w-4" /></Button>}
         <Button variant="ghost" onClick={() => navigate(debtTargetUrl(debt), { state: { returnTo, returnLabel: "Qarzlar bo'limiga qaytish" } })} className="px-3"><ExternalLink className="h-4 w-4" /></Button>
       </div>
@@ -461,11 +461,11 @@ function DebtDetailsModal({ debt, onClose, onPay, telegramEnabled = false }) {
               </h3>
               <p className="mt-1 text-sm text-slate-400">{debt.title}</p>
             </div>
-            {debt.debtAmount > 0 && <Button onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> Toâ€˜lov kiritish</Button>}
+            {debt.debtAmount > 0 && <Button onClick={() => onPay(debt)}><WalletCards className="h-4 w-4" /> To‘lov kiritish</Button>}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <InfoCard label="Umumiy summa" value={formatCurrency(debt.totalAmount)} />
-            <InfoCard label="Qilingan toâ€˜lov" value={formatCurrency(debt.paidAmount)} />
+            <InfoCard label="Qilingan to‘lov" value={formatCurrency(debt.paidAmount)} />
             <InfoCard label="Qolgan qarz" value={formatCurrency(debt.debtAmount)} danger />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

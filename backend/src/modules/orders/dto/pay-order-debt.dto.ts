@@ -3,8 +3,8 @@ import { IsEnum, IsNumber, Min } from 'class-validator';
 
 export class PayOrderDebtDto {
   @Type(() => Number)
-  @IsNumber({}, { message: 'Toâ€˜lov miqdori 0 dan katta boâ€˜lishi kerak' })
-  @Min(1, { message: 'Toâ€˜lov miqdori 0 dan katta boâ€˜lishi kerak' })
+  @IsNumber({}, { message: 'To‘lov miqdori 0 dan katta bo‘lishi kerak' })
+  @Min(1, { message: 'To‘lov miqdori 0 dan katta bo‘lishi kerak' })
   amount: number;
 
   @IsEnum(['cash', 'card', 'click', 'payme'])

@@ -283,11 +283,11 @@ export class GoogleSheetsService {
           : String(error);
 
     if (/invalid_grant|Invalid JWT Signature|PEM|private key|DECODER routines|unsupported/i.test(rawMessage)) {
-      return 'Private key notoâ€˜gâ€˜ri. JSON keyni yangidan yarating va private_key qiymatini qayta kiriting.';
+      return 'Private key noto‘g‘ri. JSON keyni yangidan yarating va private_key qiymatini qayta kiriting.';
     }
 
     if (/not found|Requested entity was not found/i.test(rawMessage)) {
-      return 'Spreadsheet topilmadi. Spreadsheet ID notoâ€˜gâ€˜ri yoki Google Sheet service account emailga share qilinmagan.';
+      return 'Spreadsheet topilmadi. Spreadsheet ID noto‘g‘ri yoki Google Sheet service account emailga share qilinmagan.';
     }
 
     if (/permission|PERMISSION_DENIED|forbidden|insufficient/i.test(rawMessage)) {
@@ -295,7 +295,7 @@ export class GoogleSheetsService {
     }
 
     if (/Unable to parse range|Unable to parse/i.test(rawMessage)) {
-      return 'Sheet nomi notoâ€˜gâ€˜ri. Buyurtmalar yoki sotuvlar sheet nomini tekshiring.';
+      return 'Sheet nomi noto‘g‘ri. Buyurtmalar yoki sotuvlar sheet nomini tekshiring.';
     }
 
     return rawMessage || 'Google Sheets ulanishida xatolik yuz berdi';

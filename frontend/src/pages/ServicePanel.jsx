@@ -93,7 +93,7 @@ export default function ServicePanel() {
   const reset = async (event) => {
     event.preventDefault();
     if (resetPassword.length < 6) {
-      toast.error('Yangi parol kamida 6 ta belgi boâ€˜lishi kerak');
+      toast.error('Yangi parol kamida 6 ta belgi bo‘lishi kerak');
       return;
     }
 
@@ -171,7 +171,7 @@ export default function ServicePanel() {
             </span>
             <div>
               <h2 className="text-lg font-bold">Mijoz akkaunti</h2>
-              <p className="text-sm text-slate-500">Doâ€˜kon egasi uchun login va parol yarating yoki yangilang.</p>
+              <p className="text-sm text-slate-500">Do‘kon egasi uchun login va parol yarating yoki yangilang.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
@@ -198,7 +198,7 @@ export default function ServicePanel() {
             </span>
             <div>
               <h2 className="text-lg font-bold">Mijoz parolini tiklash</h2>
-              <p className="text-sm text-slate-500">Keyingi kirishda mijoz parolni almashtirishga majbur boâ€˜ladi.</p>
+              <p className="text-sm text-slate-500">Keyingi kirishda mijoz parolni almashtirishga majbur bo‘ladi.</p>
             </div>
           </div>
           <div className="mt-5 grid gap-4">
@@ -253,7 +253,7 @@ export default function ServicePanel() {
           </div>
           <div className="mt-5 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-400">
             <HardDrive className="h-4 w-4 text-rose-300" />
-            Import qilingan bazalar avtomatik migratsiyadan oâ€˜tadi.
+            Import qilingan bazalar avtomatik migratsiyadan o‘tadi.
           </div>
         </section>
       </main>

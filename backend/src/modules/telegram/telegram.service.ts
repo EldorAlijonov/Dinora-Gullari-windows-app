@@ -326,7 +326,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async notifyAdminsNewSale(sale: LocalSale) {
     await this.sendToAdmins(
       [
-        'Yangi sovgâ€˜a/tovar sotildi',
+        'Yangi sovg‘a/tovar sotildi',
         '',
         `Tovar: ${sale.productName || 'Sovga/tovar'}`,
         `Mijoz: ${sale.customerName || '-'}`,
@@ -343,12 +343,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const customerName = isFlower ? (item as LocalOrder).customerName : (item as LocalSale).customerName || '-';
     await this.sendToAdmins(
       [
-        'Qarz toâ€˜lovi qabul qilindi',
+        'Qarz to‘lovi qabul qilindi',
         '',
-        `Turi: ${isFlower ? 'Gul buyurtmasi' : 'Sovgâ€˜a/tovar'}`,
+        `Turi: ${isFlower ? 'Gul buyurtmasi' : 'Sovg‘a/tovar'}`,
         `Mijoz: ${customerName}`,
         `Nomi: ${title}`,
-        `Toâ€˜langan: ${this.formatMoney(paymentAmount)}`,
+        `To‘langan: ${this.formatMoney(paymentAmount)}`,
         `Qolgan qarz: ${this.formatMoney(item.debtAmount)}`,
       ].join('\n'),
     );
@@ -382,7 +382,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         `Bugun olib ketiladi: ${pickupToday}`,
         `Kechikkan buyurtmalar: ${overdue}`,
         `Gul qarzdorlari: ${debtOrders}`,
-        `Sovgâ€˜a/tovar qarzdorlari: ${debtSales}`,
+        `Sovg‘a/tovar qarzdorlari: ${debtSales}`,
       ].join('\n'),
     );
     if (!force) this.lastAutomaticAdminAlertAt = new Date();
@@ -522,7 +522,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         'Kunlik hisobot',
         '',
         `Bugungi buyurtmalar: ${todayOrders}`,
-        `Bugungi sovgâ€˜a/tovar sotuvlari: ${todaySales}`,
+        `Bugungi sovg‘a/tovar sotuvlari: ${todaySales}`,
         `Bugungi savdo: ${this.formatMoney(sales.amount || 0)}`,
         `Bugungi tushum: ${this.formatMoney(sales.paid || 0)}`,
         `Bugungi foyda: ${this.formatMoney(sales.profit || 0)}`,
@@ -545,7 +545,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           ], 'pickupDate ASC', 10)
         : this.orders("pickupDate < ? AND status NOT IN ('picked_up', 'cancelled')", [now.toISOString()], 'pickupDate ASC', 10);
     if (orders.length === 0) {
-      await this.bot?.sendMessage(chatId, mode === 'today' ? 'Bugun olib ketiladigan buyurtma yoâ€˜q.' : 'Kechikkan buyurtma yoâ€˜q.');
+      await this.bot?.sendMessage(chatId, mode === 'today' ? 'Bugun olib ketiladigan buyurtma yo‘q.' : 'Kechikkan buyurtma yo‘q.');
       return;
     }
     for (const order of orders) {
@@ -570,7 +570,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const orders = this.orders("debtAmount > 0 AND status != 'cancelled'", [], 'debtAmount DESC', 5);
     const sales = this.sales('debtAmount > 0', [], 'debtAmount DESC', 5);
     if (orders.length + sales.length === 0) {
-      await this.bot?.sendMessage(chatId, 'Qarzdorlar yoâ€˜q.');
+      await this.bot?.sendMessage(chatId, 'Qarzdorlar yo‘q.');
       return;
     }
     for (const order of orders) {
@@ -583,7 +583,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     for (const sale of sales) {
       await this.bot?.sendMessage(
         chatId,
-        [`Sovgâ€˜a/tovar qarzi`, '', `Mijoz: ${sale.customerName || '-'}`, `Telefon: ${sale.phone || '-'}`, `Tovar: ${sale.productName}`, `Qarz: ${this.formatMoney(sale.debtAmount)}`].join('\n'),
+        [`Sovg‘a/tovar qarzi`, '', `Mijoz: ${sale.customerName || '-'}`, `Telefon: ${sale.phone || '-'}`, `Tovar: ${sale.productName}`, `Qarz: ${this.formatMoney(sale.debtAmount)}`].join('\n'),
         { reply_markup: this.debtReminderKeyboard('gift', String(sale._id)) },
       );
     }
@@ -685,7 +685,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         'Admin panel',
         '',
         '/hisobot - kunlik hisobot',
-        '/qarzlar - qarzdorlar roâ€˜yxati',
+        '/qarzlar - qarzdorlar ro‘yxati',
         '/bugun - bugun olib ketiladigan buyurtmalar',
         '/kechikkan - kechikkan buyurtmalar',
         '/qidir matn - buyurtma/sotuv/qarzdor qidirish',
@@ -813,7 +813,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.on('callback_query', async (query) => {
       const chatId = query.message?.chat.id;
       if (!chatId || !(await this.isAdminChat(chatId)) || !query.data) {
-        await this.bot?.answerCallbackQuery(query.id, { text: 'Ruxsat yoâ€˜q' });
+        await this.bot?.answerCallbackQuery(query.id, { text: 'Ruxsat yo‘q' });
         return;
       }
 
@@ -941,7 +941,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const orders = this.orders('(phone = ? OR telegramPhone = ?)', [user.phone, user.phone], 'updatedAt DESC, createdAt DESC', 5);
 
       if (orders.length === 0) {
-        await this.bot?.sendMessage(msg.chat.id, 'Hozircha sizga bogâ€˜langan buyurtma topilmadi.');
+        await this.bot?.sendMessage(msg.chat.id, 'Hozircha sizga bog‘langan buyurtma topilmadi.');
         return;
       }
 
@@ -1238,7 +1238,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     const messages: Record<OrderStatus, string> = {
       new: 'Buyurtma holati yangilandi.',
       in_progress: 'Buyurtmangiz tayyorlanmoqda.',
-      ready: 'Buyurtmangiz tayyor boâ€˜ldi.',
+      ready: 'Buyurtmangiz tayyor bo‘ldi.',
       picked_up: 'Buyurtmangiz olib ketildi. Xaridingiz uchun rahmat!',
       cancelled: 'Buyurtmangiz bekor qilindi.',
     };

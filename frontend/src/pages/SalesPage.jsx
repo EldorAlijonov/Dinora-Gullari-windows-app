@@ -20,8 +20,8 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/formatDate';
 
 const requiredText = 'Ushbu maydon majburiy';
-const minNumberText = 'Qiymat 0 dan kichik boâ€˜lmasligi kerak';
-const invalidPhoneText = 'Telefon raqam notoâ€˜gâ€˜ri kiritildi';
+const minNumberText = 'Qiymat 0 dan kichik bo‘lmasligi kerak';
+const invalidPhoneText = 'Telefon raqam noto‘g‘ri kiritildi';
 
 const paymentTypes = [
   ['cash', 'Naqd'],
@@ -49,7 +49,7 @@ function buildSchema(telegramEnabled) {
   telegramPhone: telegramEnabled ? optionalPhoneField : z.string().optional().transform(() => ''),
   amount: numberField,
   paidAmount: numberField,
-  paymentType: z.string({ required_error: requiredText }).min(1, 'Toâ€˜lov turini tanlang'),
+  paymentType: z.string({ required_error: requiredText }).min(1, 'To‘lov turini tanlang'),
   note: z.string().optional(),
   });
 }
@@ -180,8 +180,8 @@ export default function SalesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Sovgâ€˜a va tovar sotuvlari"
-        description="Doâ€˜kondagi sovgâ€˜a, aksessuar va tayyor tovarlar sotuvini kiriting."
+        title="Sovg‘a va tovar sotuvlari"
+        description="Do‘kondagi sovg‘a, aksessuar va tayyor tovarlar sotuvini kiriting."
         action={returnTo && (
           <Button variant="secondary" onClick={() => navigate(returnTo)}>
             <ChevronLeft className="h-4 w-4" />
@@ -192,7 +192,7 @@ export default function SalesPage() {
 
       {highlightId && (
         <Card className="border-amber-300/20 bg-amber-400/10">
-          <p className="text-sm font-semibold text-amber-100">Bildirishnomadan ochilgan sotuv ajratib koâ€˜rsatiladi.</p>
+          <p className="text-sm font-semibold text-amber-100">Bildirishnomadan ochilgan sotuv ajratib ko‘rsatiladi.</p>
         </Card>
       )}
 
@@ -216,13 +216,13 @@ export default function SalesPage() {
               )}
             />
             <Select value={params.paymentType || ''} onChange={(event) => setParams((current) => ({ ...current, paymentType: event.target.value || undefined, page: 1 }))}>
-              <option value="">Barcha toâ€˜lovlar</option>
+              <option value="">Barcha to‘lovlar</option>
               {paymentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </Select>
             <Input type="date" value={params.date || ''} onChange={(event) => setParams((current) => ({ ...current, date: event.target.value || undefined, page: 1 }))} />
           </div>
           <div className="flex rounded-lg border border-white/10 bg-slate-950/30 p-1">
-            <Button variant={viewMode === 'table' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('table')}><List className="h-4 w-4" /> Roâ€˜yxat</Button>
+            <Button variant={viewMode === 'table' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('table')}><List className="h-4 w-4" /> Ro‘yxat</Button>
             <Button variant={viewMode === 'card' ? 'primary' : 'ghost'} className="px-3" onClick={() => setViewMode('card')}><Grid2X2 className="h-4 w-4" /> Card</Button>
           </div>
 
@@ -238,7 +238,7 @@ export default function SalesPage() {
         <Card className="overflow-x-auto">
           <table className="w-full min-w-[1120px] text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
-              <tr>{['#', 'Sana', 'Tovar', 'Mijoz', 'Telefon', 'Jami summa', 'Qilingan toâ€˜lov', 'Qolgan qarz', 'Toâ€˜lov turi', 'Amallar'].map((heading) => <th key={heading} className="px-3 py-3">{heading}</th>)}</tr>
+              <tr>{['#', 'Sana', 'Tovar', 'Mijoz', 'Telefon', 'Jami summa', 'Qilingan to‘lov', 'Qolgan qarz', 'To‘lov turi', 'Amallar'].map((heading) => <th key={heading} className="px-3 py-3">{heading}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-white/10">
               {data.map((sale, index) => (
@@ -249,7 +249,7 @@ export default function SalesPage() {
                 >
                   <td className="px-3 py-3 font-bold text-slate-500">{index + 1}</td>
                   <td className="px-3 py-3 text-slate-400">{formatDate(sale.createdAt)}</td>
-                  <td className="px-3 py-3 font-semibold text-slate-100">{sale.productName || 'Sovgâ€˜a/tovar'}</td>
+                  <td className="px-3 py-3 font-semibold text-slate-100">{sale.productName || 'Sovg‘a/tovar'}</td>
                   <td className="px-3 py-3 text-slate-300">
                     <CopyableText value={sale.customerName} label="Mijoz ismini nusxalash" />
                   </td>
@@ -279,23 +279,23 @@ export default function SalesPage() {
         </div>
       )}
 
-      <Modal open={formOpen} title={editingSale ? 'Sovgâ€˜a/tovar sotuvini tahrirlash' : 'Sovgâ€˜a/tovar sotish'} onClose={() => setFormOpen(false)}>
+      <Modal open={formOpen} title={editingSale ? 'Sovg‘a/tovar sotuvini tahrirlash' : 'Sovg‘a/tovar sotish'} onClose={() => setFormOpen(false)}>
         <form onSubmit={handleSubmit(submit)} className="grid gap-4 sm:grid-cols-2">
           <Input label="Tovar nomi" error={formState.errors.productName?.message} {...register('productName')} />
-          <Select label="Toâ€˜lov turi" error={formState.errors.paymentType?.message} {...register('paymentType')}>{paymentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select>
+          <Select label="To‘lov turi" error={formState.errors.paymentType?.message} {...register('paymentType')}>{paymentTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select>
           <Input label="Mijoz ismi" {...register('customerName')} />
           <Input label="Telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.phone?.message} {...register('phone')} />
           {telegramEnabled && (
             <Input label="Telegram telefon" placeholder="901234567" inputMode="tel" leftElement={<span className="text-sm font-bold text-slate-300">+998</span>} error={formState.errors.telegramPhone?.message} {...register('telegramPhone')} />
           )}
           <Input label="Jami summa" type="number" min="0" error={formState.errors.amount?.message} {...register('amount')} />
-          <Input label="Qilingan toâ€˜lov" type="number" min="0" error={formState.errors.paidAmount?.message} {...register('paidAmount')} />
+          <Input label="Qilingan to‘lov" type="number" min="0" error={formState.errors.paidAmount?.message} {...register('paidAmount')} />
           <div className={`rounded-lg border p-3 ${debtAmount > 0 ? 'border-amber-300/20 bg-amber-400/10 text-amber-100' : 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'}`}>
             <p className="text-sm font-semibold text-slate-300">Qolgan qarz</p>
             <p className="mt-1 text-xl font-bold">{formatCurrency(debtAmount)}</p>
           </div>
           <Button type="button" variant="secondary" onClick={() => setValue('paidAmount', amount, { shouldValidate: true })}>
-            Toâ€˜liq toâ€˜landi
+            To‘liq to‘landi
           </Button>
           <Textarea label="Izoh" className="sm:col-span-2" {...register('note')} />
           <Button loading={createState.isLoading || updateState.isLoading} className="sm:col-span-2">{editingSale ? 'Yangilash' : 'Saqlash'}</Button>
@@ -305,7 +305,7 @@ export default function SalesPage() {
       <ConfirmModal
         open={Boolean(pendingSubmit)}
         title={editingSale ? 'Sotuvni yangilash' : 'Sotuvni saqlash'}
-        description={editingSale ? 'Sovgâ€˜a/tovar sotuvini yangilashni tasdiqlaysizmi?' : 'Yangi sovgâ€˜a/tovar sotuvini saqlashni tasdiqlaysizmi?'}
+        description={editingSale ? 'Sovg‘a/tovar sotuvini yangilashni tasdiqlaysizmi?' : 'Yangi sovg‘a/tovar sotuvini saqlashni tasdiqlaysizmi?'}
         loading={createState.isLoading || updateState.isLoading}
         onClose={() => setPendingSubmit(null)}
         onConfirm={confirmSubmit}
@@ -313,9 +313,9 @@ export default function SalesPage() {
 
       <ConfirmModal
         open={Boolean(deletingSale)}
-        title="Sotuvni oâ€˜chirish"
-        description={`${deletingSale?.productName || 'Ushbu sotuv'} yozuvini oâ€˜chirishni tasdiqlaysizmi?`}
-        confirmText="Oâ€˜chirish"
+        title="Sotuvni o‘chirish"
+        description={`${deletingSale?.productName || 'Ushbu sotuv'} yozuvini o‘chirishni tasdiqlaysizmi?`}
+        confirmText="O‘chirish"
         variant="danger"
         onClose={() => setDeletingSale(null)}
         onConfirm={confirmDelete}
@@ -336,7 +336,7 @@ function SaleCard({ sale, index, highlighted, onView, onEdit, onDelete, telegram
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-slate-500">#{index + 1}</p>
-          <h3 className="mt-1 text-lg font-bold text-slate-100">{sale.productName || 'Sovgâ€˜a/tovar'}</h3>
+          <h3 className="mt-1 text-lg font-bold text-slate-100">{sale.productName || 'Sovg‘a/tovar'}</h3>
           <p className="mt-1 text-sm text-slate-400">
             <CopyableText value={sale.customerName} label="Mijoz ismini nusxalash">{sale.customerName || 'Mijoz kiritilmagan'}</CopyableText>
           </p>
@@ -348,7 +348,7 @@ function SaleCard({ sale, index, highlighted, onView, onEdit, onDelete, telegram
 
       <div className="mt-4 grid grid-cols-3 gap-2 rounded-lg border border-white/10 bg-slate-950/25 p-3">
         <Info label="Jami" value={formatCurrency(sale.amount)} />
-        <Info label="Toâ€˜langan" value={formatCurrency(sale.paidAmount || 0)} />
+        <Info label="To‘langan" value={formatCurrency(sale.paidAmount || 0)} />
         <Info label="Qarz" value={formatCurrency(sale.debtAmount || 0)} danger />
       </div>
 
@@ -384,26 +384,26 @@ function Info({ label, value, danger }) {
 
 function SaleDetailsModal({ sale, onClose, onEdit, telegramEnabled = false }) {
   return (
-    <Modal open={Boolean(sale)} title="Sovgâ€˜a/tovar tafsilotlari" onClose={onClose} maxWidth="max-w-2xl">
+    <Modal open={Boolean(sale)} title="Sovg‘a/tovar tafsilotlari" onClose={onClose} maxWidth="max-w-2xl">
       {sale && (
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-xl font-bold text-slate-100">{sale.productName || 'Sovgâ€˜a/tovar'}</h3>
+              <h3 className="text-xl font-bold text-slate-100">{sale.productName || 'Sovg‘a/tovar'}</h3>
               <p className="mt-1 text-sm text-slate-400">{formatDate(sale.createdAt)}</p>
             </div>
             <Button variant="secondary" onClick={() => onEdit(sale)}><Pencil className="h-4 w-4" /> Tahrirlash</Button>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <InfoCard label="Jami summa" value={formatCurrency(sale.amount)} />
-            <InfoCard label="Qilingan toâ€˜lov" value={formatCurrency(sale.paidAmount || 0)} />
+            <InfoCard label="Qilingan to‘lov" value={formatCurrency(sale.paidAmount || 0)} />
             <InfoCard label="Qolgan qarz" value={formatCurrency(sale.debtAmount || 0)} danger />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoCard label="Mijoz" value={sale.customerName || '-'} copyable />
             <InfoCard label="Telefon" value={sale.phone || '-'} copyable />
             {telegramEnabled && <InfoCard label="Telegram telefon" value={sale.telegramPhone || sale.phone || '-'} copyable />}
-            <InfoCard label="Toâ€˜lov turi" value={paymentTypes.find(([value]) => value === sale.paymentType)?.[1] || sale.paymentType} />
+            <InfoCard label="To‘lov turi" value={paymentTypes.find(([value]) => value === sale.paymentType)?.[1] || sale.paymentType} />
             <InfoCard label="Izoh" value={sale.note || '-'} />
           </div>
         </div>
