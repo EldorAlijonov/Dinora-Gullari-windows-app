@@ -10,7 +10,7 @@ function logMain(message) {
 
 logMain('main module loading');
 
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const http = require('http');
@@ -20,6 +20,8 @@ const backendStartupTimeoutMs = Number(process.env.DINORA_BACKEND_TIMEOUT_MS || 
 const updateCheckIntervalMs = Number(process.env.DINORA_UPDATE_INTERVAL_MS || 6 * 60 * 60 * 1000);
 let backendProcess;
 let mainWindow;
+let tray;
+let isQuitting = false;
 let updateCheckTimer;
 let updateCheckInProgress = false;
 let updateDialogShown = false;
@@ -273,6 +275,54 @@ function appIconPath() {
   return rootPath('assets', 'icon.ico');
 }
 
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow().catch((error) => {
+      logMain(`show window failed ${error instanceof Error ? error.stack || error.message : String(error)}`);
+    });
+    return;
+  }
+
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createTray() {
+  if (tray) return;
+
+  tray = new Tray(appIconPath());
+  tray.setToolTip('Dinora Gullari');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: 'Ochish',
+        click: showMainWindow,
+      },
+      {
+        label: 'Yashirish',
+        click: () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.hide();
+          }
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Chiqish',
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        },
+      },
+    ]),
+  );
+
+  tray.on('click', showMainWindow);
+  tray.on('double-click', showMainWindow);
+  logMain('tray created');
+}
+
 async function createWindow() {
   logMain('createWindow');
   mainWindow = new BrowserWindow({
@@ -288,6 +338,13 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow.on('close', (event) => {
+    if (isQuitting || installingUpdate) return;
+
+    event.preventDefault();
+    mainWindow.hide();
   });
 
   await waitForBackend();
@@ -318,6 +375,7 @@ if (!gotSingleInstanceLock) {
     try {
       startBackend();
       await createWindow();
+      createTray();
       scheduleUpdateChecks();
     } catch (error) {
       logMain(`startup error ${error instanceof Error ? error.stack || error.message : String(error)}`);
@@ -327,13 +385,20 @@ if (!gotSingleInstanceLock) {
   });
 
   app.on('window-all-closed', () => {
-    app.quit();
+    logMain('all windows closed, keeping app in tray');
   });
 
   app.on('before-quit', () => {
+    isQuitting = true;
+
     if (updateCheckTimer) {
       clearInterval(updateCheckTimer);
       updateCheckTimer = undefined;
+    }
+
+    if (tray) {
+      tray.destroy();
+      tray = undefined;
     }
 
     if (backendProcess && !backendProcess.killed) {
