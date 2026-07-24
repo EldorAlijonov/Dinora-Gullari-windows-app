@@ -75,6 +75,12 @@ function dateRange(period, anchorValue) {
   return { dateFrom: inputDate(start), dateTo: inputDate(end) };
 }
 
+function queryItems(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  return [];
+}
+
 export default function ArchivePage() {
   const navigate = useNavigate();
   const today = inputDate(new Date());
@@ -96,8 +102,8 @@ export default function ArchivePage() {
   const { data: settingsData } = useSettingsQuery();
   const telegramEnabled = Boolean(settingsData?.telegramBotConfigured);
 
-  const orderItems = (orders.data || []).map((item) => ({ type: 'order', createdAt: item.createdAt, item }));
-  const saleItems = (sales.data || []).map((item) => ({ type: 'sale', createdAt: item.createdAt, item }));
+  const orderItems = queryItems(orders.data).map((item) => ({ type: 'order', createdAt: item.createdAt, item }));
+  const saleItems = queryItems(sales.data).map((item) => ({ type: 'sale', createdAt: item.createdAt, item }));
   const items = [...orderItems, ...saleItems].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const totalAmount = items.reduce((sum, row) => sum + (row.type === 'order' ? row.item.totalAmount : row.item.amount), 0);
   const totalDebt = items.reduce((sum, row) => sum + (row.item.debtAmount || 0), 0);

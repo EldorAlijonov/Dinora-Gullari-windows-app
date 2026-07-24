@@ -169,7 +169,7 @@ export default function SettingsPage() {
   const [testGoogleSheets, googleSheetsTestState] = useTestGoogleSheetsMutation();
   const [updateMe, profileState] = useUpdateMeMutation();
   const [changePassword, passwordState] = useChangePasswordMutation();
-  const [openSections, setOpenSections] = useState({ store: true, account: false, telegram: false, google: false });
+  const [openSections, setOpenSections] = useState({ store: false, account: false, telegram: false, google: false });
   const [settings, setSettings] = useState(defaultSettings);
   const [telegramAdminInput, setTelegramAdminInput] = useState('');
   const [showGoogleKey, setShowGoogleKey] = useState(false);

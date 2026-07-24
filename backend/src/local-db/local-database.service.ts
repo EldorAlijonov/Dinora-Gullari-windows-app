@@ -296,18 +296,69 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
     `);
 
     const settingsColumns = this.all<{ name: string }>('PRAGMA table_info(settings);').map((column) => column.name);
-    if (!settingsColumns.includes('telegramBotToken')) {
-      this.database().run("ALTER TABLE settings ADD COLUMN telegramBotToken TEXT NOT NULL DEFAULT '';");
-    }
+    this.addMissingColumns('settings', settingsColumns, [
+      ['storeName', "TEXT NOT NULL DEFAULT 'Dinora Gullari'"],
+      ['storePhone', "TEXT NOT NULL DEFAULT ''"],
+      ['storeAddress', "TEXT NOT NULL DEFAULT ''"],
+      ['workHours', "TEXT NOT NULL DEFAULT ''"],
+      ['logoUrl', "TEXT NOT NULL DEFAULT ''"],
+      ['telegramOrderAcceptedEnabled', 'INTEGER NOT NULL DEFAULT 1'],
+      ['telegramOrderStatusEnabled', 'INTEGER NOT NULL DEFAULT 1'],
+      ['telegramDebtReminderEnabled', 'INTEGER NOT NULL DEFAULT 1'],
+      ['telegramDebtPaymentEnabled', 'INTEGER NOT NULL DEFAULT 1'],
+      ['telegramSaleCreatedEnabled', 'INTEGER NOT NULL DEFAULT 1'],
+      ['telegramBotToken', "TEXT NOT NULL DEFAULT ''"],
+      ['telegramAdminIds', "TEXT NOT NULL DEFAULT '[]'"],
+      ['requirePhoneForDebtSales', 'INTEGER NOT NULL DEFAULT 1'],
+      ['debtReminderAfterDays', 'INTEGER NOT NULL DEFAULT 3'],
+      ['preventSameDayDebtReminder', 'INTEGER NOT NULL DEFAULT 1'],
+      ['debtReminderText', "TEXT NOT NULL DEFAULT 'Qarzdorlik bo''yicha eslatma.'"],
+      ['googleSheetsEnabled', 'INTEGER NOT NULL DEFAULT 0'],
+      ['googleSheetsSpreadsheetId', "TEXT NOT NULL DEFAULT ''"],
+      ['googleSheetsServiceAccountEmail', "TEXT NOT NULL DEFAULT ''"],
+      ['googleSheetsPrivateKey', "TEXT NOT NULL DEFAULT ''"],
+      ['googleSheetsOrdersSheet', "TEXT NOT NULL DEFAULT 'Orders'"],
+      ['googleSheetsSalesSheet', "TEXT NOT NULL DEFAULT 'Sales'"],
+    ]);
 
     const userColumns = this.all<{ name: string }>('PRAGMA table_info(users);').map((c) => c.name);
-    if (!userColumns.includes('username')) {
-      this.database().run("ALTER TABLE users ADD COLUMN username TEXT;");
-    }
-    if (!userColumns.includes('mustChangePassword')) {
-      this.database().run("ALTER TABLE users ADD COLUMN mustChangePassword INTEGER NOT NULL DEFAULT 0;");
-    }
+    this.addMissingColumns('users', userColumns, [
+      ['username', 'TEXT'],
+      ['mustChangePassword', 'INTEGER NOT NULL DEFAULT 0'],
+      ['avatarUrl', "TEXT NOT NULL DEFAULT ''"],
+    ]);
     this.database().run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);');
+
+    this.addMissingColumns('orders', this.tableColumns('orders'), [
+      ['telegramPhone', "TEXT NOT NULL DEFAULT ''"],
+      ['prepaidAmount', 'REAL NOT NULL DEFAULT 0'],
+      ['debtAmount', 'REAL NOT NULL DEFAULT 0'],
+      ['note', "TEXT NOT NULL DEFAULT ''"],
+      ['isTelegramNotified', 'INTEGER NOT NULL DEFAULT 0'],
+      ['payments', "TEXT NOT NULL DEFAULT '[]'"],
+      ['createdBy', 'TEXT'],
+      ['updatedAt', "TEXT NOT NULL DEFAULT ''"],
+    ]);
+    this.database().run("UPDATE orders SET updatedAt = createdAt WHERE updatedAt = '';");
+    this.database().run('UPDATE orders SET debtAmount = MAX(totalAmount - prepaidAmount, 0) WHERE debtAmount = 0 AND prepaidAmount > 0;');
+
+    this.addMissingColumns('sales', this.tableColumns('sales'), [
+      ['productName', "TEXT NOT NULL DEFAULT 'Sovga/tovar'"],
+      ['customerName', "TEXT NOT NULL DEFAULT ''"],
+      ['phone', "TEXT NOT NULL DEFAULT ''"],
+      ['telegramPhone', "TEXT NOT NULL DEFAULT ''"],
+      ['paidAmount', 'REAL NOT NULL DEFAULT 0'],
+      ['debtAmount', 'REAL NOT NULL DEFAULT 0'],
+      ['costPrice', 'REAL NOT NULL DEFAULT 0'],
+      ['profit', 'REAL NOT NULL DEFAULT 0'],
+      ['note', "TEXT NOT NULL DEFAULT ''"],
+      ['payments', "TEXT NOT NULL DEFAULT '[]'"],
+      ['createdBy', 'TEXT'],
+      ['updatedAt', "TEXT NOT NULL DEFAULT ''"],
+    ]);
+    this.database().run("UPDATE sales SET productName = 'Sovga/tovar' WHERE productName = '';");
+    this.database().run('UPDATE sales SET paidAmount = amount WHERE paidAmount = 0 AND debtAmount = 0;');
+    this.database().run("UPDATE sales SET updatedAt = createdAt WHERE updatedAt = '';");
 
     const now = new Date().toISOString();
     this.database().run(
@@ -315,6 +366,19 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
       [now, now],
     );
     this.database().run('PRAGMA user_version = 1;');
+  }
+
+  private tableColumns(tableName: string) {
+    return this.all<{ name: string }>(`PRAGMA table_info(${tableName});`).map((column) => column.name);
+  }
+
+  private addMissingColumns(tableName: string, columns: string[], definitions: Array<[string, string]>) {
+    for (const [name, definition] of definitions) {
+      if (!columns.includes(name)) {
+        this.database().run(`ALTER TABLE ${tableName} ADD COLUMN ${name} ${definition};`);
+        columns.push(name);
+      }
+    }
   }
 
   private async ensureServiceAccount() {
