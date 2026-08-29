@@ -9,6 +9,8 @@ import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { getLocalDataDir } from './local-app/paths';
+import { LocalDatabaseError } from './local-db/database-errors';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
 
 function parseOrigins(value?: string) {
@@ -77,6 +79,48 @@ function logDesktopBackend(message: string) {
 void bootstrap().catch((error) => {
   const message = error instanceof Error ? error.stack || error.message : String(error);
   logDesktopBackend(`startup failed ${message}`);
+  writeDesktopStartupError(error);
   console.error(message);
   process.exit(1);
 });
+
+function writeDesktopStartupError(error: unknown) {
+  if (process.env.ELECTRON_DESKTOP !== 'true') return;
+  try {
+    const dir = join(getLocalDataDir(), 'logs');
+    mkdirSync(dir, { recursive: true });
+    const code = error instanceof LocalDatabaseError ? error.code : 'BACKEND_START_FAILED';
+    const userMessage = userFriendlyStartupMessage(code);
+    appendFileSync(join(dir, 'backend-bootstrap.log'), `${new Date().toISOString()} startup error code=${code}\n`);
+    require('fs').writeFileSync(
+      join(dir, 'backend-startup-error.json'),
+      JSON.stringify(
+        {
+          code,
+          message: error instanceof Error ? error.message : String(error),
+          userMessage,
+          logPath: join(dir, 'backend.err.log'),
+          createdAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+  } catch {
+    // Startup diagnostics are best effort; the original error still goes to stderr.
+  }
+}
+
+function userFriendlyStartupMessage(code: string) {
+  if (code === 'DATABASE_BACKUP_NOT_FOUND') {
+    return "Ma'lumotlar bazasini ochib bo'lmadi va sog'lom zaxira nusxa topilmadi. Asl fayl saqlab qolindi. Texnik yordam uchun log fayllarini yuboring.";
+  }
+  if (code === 'DATABASE_MIGRATION_FAILED') {
+    return "Ma'lumotlar bazasini yangilashda xatolik yuz berdi. Ma'lumotlar saqlangan, texnik yordam uchun log fayllarini yuboring.";
+  }
+  if (code === 'DATABASE_WRITE_FAILED') {
+    return "Ma'lumotlar bazasini diskka yozishda xatolik yuz berdi. Oldingi sog'lom nusxa saqlab qolindi.";
+  }
+  return "Backend ishga tushmadi. Texnik yordam uchun log fayllarini yuboring.";
+}

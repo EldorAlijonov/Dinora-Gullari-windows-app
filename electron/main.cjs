@@ -29,6 +29,14 @@ let installingUpdate = false;
 let updaterConfigured = false;
 let lastUpdateProgressLogAt = 0;
 
+function localDataDir() {
+  return path.join(process.env.APPDATA || process.cwd(), 'Dinora Gullari');
+}
+
+function localLogsDir() {
+  return path.join(localDataDir(), 'logs');
+}
+
 function rootPath(...parts) {
   return app.isPackaged
     ? path.join(process.resourcesPath, ...parts)
@@ -157,6 +165,7 @@ function desktopBackendEnv() {
   return {
     ELECTRON_DESKTOP: 'true',
     LOCAL_DATABASE_ENABLED: 'true',
+    DINORA_DATA_DIR: localDataDir(),
     PORT: String(backendPort),
     CLIENT_URLS: 'http://localhost:5173,http://127.0.0.1:5173,file://,null',
     COOKIE_SECURE: 'false',
@@ -232,7 +241,7 @@ function startBackend() {
   logMain(`startBackend packaged=${app.isPackaged} resourcesPath=${process.resourcesPath}`);
   const backendMain = rootPath('backend', 'dist', 'main.js');
   const backendCwd = rootPath('backend');
-  const logDir = path.join(app.getPath('userData'), 'logs');
+  const logDir = localLogsDir();
   fs.mkdirSync(logDir, { recursive: true });
   const packagedNodeExecutable = rootPath('runtime', 'node.exe');
   const hasPackagedNode = app.isPackaged && fs.existsSync(packagedNodeExecutable);
@@ -265,10 +274,69 @@ function startBackend() {
 
   backendProcess.on('exit', (code) => {
     logMain(`backend exited code=${code}`);
-    if (code && mainWindow) {
-      dialog.showErrorBox('Dinora Gullari', `Backend to'xtadi. Kod: ${code}`);
+    if (code && mainWindow && !isQuitting && !installingUpdate) {
+      const startupError = readBackendStartupError();
+      dialog.showErrorBox('Dinora Gullari', formatBackendErrorForUser(code, startupError));
     }
   });
+}
+
+function readJsonFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    logMain(`failed to read json file path=${filePath} error=${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
+}
+
+function readBackendStartupError() {
+  return readJsonFile(path.join(localLogsDir(), 'backend-startup-error.json'));
+}
+
+function readRecoveryNotice() {
+  return readJsonFile(path.join(localLogsDir(), 'database-recovery-notice.json'));
+}
+
+function clearRecoveryNotice() {
+  try {
+    fs.unlinkSync(path.join(localLogsDir(), 'database-recovery-notice.json'));
+  } catch {
+    // best effort
+  }
+}
+
+function formatBackendErrorForUser(exitCode, startupError) {
+  const code = startupError && startupError.code ? startupError.code : 'BACKEND_START_FAILED';
+  const logPath = startupError && startupError.logPath ? startupError.logPath : path.join(localLogsDir(), 'backend.err.log');
+  const message =
+    startupError && startupError.userMessage
+      ? startupError.userMessage
+      : code === 'DATABASE_BACKUP_NOT_FOUND'
+        ? "Ma'lumotlar bazasini ochib bo'lmadi va sog'lom zaxira nusxa topilmadi. Asl fayl saqlab qolindi."
+        : "Backend ishga tushmadi. Texnik yordam uchun log fayllarini yuboring.";
+
+  return `${message}\n\nXato kodi: ${code}\nBackend chiqish kodi: ${exitCode}\nLog: ${logPath}`;
+}
+
+function showRecoveryNoticeIfAny() {
+  const notice = readRecoveryNotice();
+  if (!notice) return;
+  const backupDate = notice.backupCreatedAt ? new Date(notice.backupCreatedAt) : null;
+  const detail =
+    backupDate && !Number.isNaN(backupDate.getTime())
+      ? `Ma'lumotlar ${backupDate.toLocaleDateString('uz-UZ')} sanasidagi zaxira nusxadan tiklandi.`
+      : "Dastur eng so'nggi sog'lom zaxira nusxadan tiklandi.";
+  dialog.showMessageBox(mainWindow || undefined, {
+    type: 'info',
+    title: 'Dinora Gullari',
+    message: "Ma'lumotlar bazasi tiklandi",
+    detail,
+    buttons: ['Tushunarli'],
+    noLink: true,
+  });
+  clearRecoveryNotice();
 }
 
 function appIconPath() {
@@ -349,6 +417,7 @@ async function createWindow() {
 
   await waitForBackend();
   logMain('backend ready');
+  showRecoveryNoticeIfAny();
 
   if (!app.isPackaged && process.env.ELECTRON_LOAD_DEV_SERVER === 'true') {
     await mainWindow.loadURL('http://127.0.0.1:5173');
@@ -379,7 +448,7 @@ if (!gotSingleInstanceLock) {
       scheduleUpdateChecks();
     } catch (error) {
       logMain(`startup error ${error instanceof Error ? error.stack || error.message : String(error)}`);
-      dialog.showErrorBox('Dinora Gullari', error instanceof Error ? error.message : String(error));
+      dialog.showErrorBox('Dinora Gullari', formatBackendErrorForUser(backendProcess && backendProcess.exitCode !== null ? backendProcess.exitCode : 'unknown', readBackendStartupError()));
       app.quit();
     }
   });

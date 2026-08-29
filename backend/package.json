@@ -6,6 +6,7 @@
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "build": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true});\" && nest build",
+    "test:db-recovery": "npm run build && node dist/local-db/local-database.recovery.spec.js",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "seed:admin": "tsx src/scripts/seed-admin.ts",

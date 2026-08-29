@@ -1,7 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { copyFile, mkdir, readdir, stat, writeFile } from 'fs/promises';
+import { mkdir, readdir, stat, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { LocalDatabaseService } from '../../local-db/local-database.service';
 
@@ -42,8 +42,8 @@ export class BackupsService {
     const filename = `dinora-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     const filePath = join(backupDir, filename);
     await writeFile(filePath, JSON.stringify(payload, null, 2), 'utf8');
-    const sqliteFilename = filename.replace(/\.json$/, '.sqlite');
-    await copyFile(this.localDatabase.paths.database, join(backupDir, sqliteFilename));
+    const sqlitePath = this.localDatabase.createVerifiedBackup('scheduled-or-manual');
+    const sqliteFilename = sqlitePath.split(/[\\/]/).pop() || filename.replace(/\.json$/, '.sqlite');
     return { filename, sqliteFilename, filePath, createdAt: payload.metadata.createdAt };
   }
 

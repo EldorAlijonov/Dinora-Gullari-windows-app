@@ -1,13 +1,32 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
+import {
+  appendFileSync,
+  closeSync,
+  copyFileSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'fs';
+import { basename, dirname, join } from 'path';
 import initSqlJs, { BindParams, Database, SqlJsStatic } from 'sql.js';
 import { getLocalDataDir, getLocalDatabasePath } from '../local-app/paths';
+import { LocalDatabaseError } from './database-errors';
 
 type SqlParam = string | number | boolean | null | Uint8Array;
 type SqlParams = SqlParam[] | BindParams;
+type ValidationResult = { ok: true; size: number; tables: string[] } | { ok: false; size: number; reason: string };
+
+const criticalTables = ['users', 'settings', 'orders', 'sales', 'telegram_users', 'notifications', 'deleted_records'];
+const backupRetentionLimit = 50;
 
 @Injectable()
 export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -20,13 +39,21 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
     database: this.databasePath,
     backups: join(getLocalDataDir(), 'backups'),
   };
+  private readonly logsDir = join(getLocalDataDir(), 'logs');
+  private readonly recoveryNoticePath = join(this.logsDir, 'database-recovery-notice.json');
+  private readonly startupErrorPath = join(this.logsDir, 'backend-startup-error.json');
+  private migrationBackupCreated = false;
 
   async onModuleInit() {
     await this.open();
   }
 
   onModuleDestroy() {
-    this.persist();
+    try {
+      this.persist();
+    } catch (error) {
+      this.logDatabaseEvent('persist failed during shutdown', { error: this.errorMessage(error) });
+    }
     this.db?.close();
   }
 
@@ -39,21 +66,79 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
     });
 
     mkdirSync(dirname(this.databasePath), { recursive: true });
-    const existing = existsSync(this.databasePath) ? readFileSync(this.databasePath) : undefined;
-    this.db = existing ? new this.sql.Database(existing) : new this.sql.Database();
-    this.db.run('PRAGMA foreign_keys = ON;');
-    await this.migrate();
+    mkdirSync(this.paths.backups, { recursive: true });
+    mkdirSync(this.logsDir, { recursive: true });
+    this.clearStartupError();
+    this.logDatabaseEvent('database startup validation started', {
+      databasePath: this.databasePath,
+      exists: existsSync(this.databasePath),
+      size: this.safeSize(this.databasePath),
+    });
+
+    this.recoverInterruptedReplace();
+    const existing = existsSync(this.databasePath);
+    if (existing) {
+      const validation = this.validateDatabaseFile(this.databasePath, { requireApplicationSchema: false });
+      this.logDatabaseEvent('primary database validation completed', validation);
+      if (!validation.ok) {
+        await this.recoverPrimaryDatabase(validation.reason);
+      } else {
+        this.db = new this.sql.Database(readFileSync(this.databasePath));
+      }
+    } else {
+      this.logDatabaseEvent('database file missing; creating first-install database', {});
+      this.db = new this.sql.Database();
+    }
+
+    this.database().run('PRAGMA foreign_keys = ON;');
+    try {
+      if (existing && !this.migrationBackupCreated) {
+        this.createVerifiedBackup('pre-migration');
+        this.migrationBackupCreated = true;
+      }
+      this.logDatabaseEvent('migration started', {});
+      await this.migrate();
+      this.logDatabaseEvent('migration completed', {});
+    } catch (error) {
+      const dbError = new LocalDatabaseError('DATABASE_MIGRATION_FAILED', 'Database migration failed', {}, error);
+      this.writeStartupError(dbError);
+      throw dbError;
+    }
     await this.ensureServiceAccount();
     this.persist();
     this.logger.log(`Local SQLite database ready: ${this.databasePath}`);
   }
 
   async replaceDatabaseFromFile(sourcePath: string) {
+    this.logDatabaseEvent('database import validation started', { sourcePath, size: this.safeSize(sourcePath) });
+    const validation = this.validateDatabaseFile(sourcePath, { requireApplicationSchema: true });
+    if (!validation.ok) {
+      this.logDatabaseEvent('database import rejected', { reason: validation.reason });
+      throw new LocalDatabaseError('DATABASE_IMPORT_INVALID', `Import database is invalid: ${validation.reason}`);
+    }
+
+    this.createVerifiedBackup('pre-import');
     const current = this.database();
     current.close();
     this.db = undefined;
-    copyFileSync(sourcePath, this.databasePath);
-    await this.open();
+
+    try {
+      this.safeReplaceDatabaseFromFile(sourcePath, 'import');
+      this.db = new this.sql!.Database(readFileSync(this.databasePath));
+      this.database().run('PRAGMA foreign_keys = ON;');
+      await this.migrate();
+      await this.ensureServiceAccount();
+      this.persist();
+      this.logDatabaseEvent('database import completed', {});
+    } catch (error) {
+      this.db = new this.sql!.Database(readFileSync(this.databasePath));
+      const dbError =
+        error instanceof LocalDatabaseError
+          ? error
+          : new LocalDatabaseError('DATABASE_IMPORT_FAILED', 'Database import failed', {}, error);
+      this.logDatabaseEvent('database import failed', { error: this.errorMessage(dbError) });
+      throw dbError;
+    }
   }
 
   sizeInBytes() {
@@ -132,12 +217,360 @@ export class LocalDatabaseService implements OnModuleInit, OnModuleDestroy {
 
   persist() {
     if (!this.db) return;
-    writeFileSync(this.databasePath, Buffer.from(this.db.export()));
+    this.logDatabaseEvent('persist started', { databasePath: this.databasePath });
+    let exported: Buffer;
+    try {
+      exported = Buffer.from(this.db.export());
+    } catch (error) {
+      throw new LocalDatabaseError('DATABASE_WRITE_FAILED', 'Failed to export SQL.js database', {}, error);
+    }
+
+    const tmpPath = `${this.databasePath}.tmp`;
+    try {
+      this.writeFileFully(tmpPath, exported);
+      this.logDatabaseEvent('persist tmp write completed', { tmpPath, size: exported.length });
+    } catch (error) {
+      this.cleanupFile(tmpPath);
+      this.logDatabaseEvent('persist tmp write failed', { error: this.errorMessage(error) });
+      throw new LocalDatabaseError('DATABASE_WRITE_FAILED', 'Failed to write temporary database file', {}, error);
+    }
+
+    const tmpValidation = this.validateDatabaseFile(tmpPath, { requireApplicationSchema: false });
+    this.logDatabaseEvent('persist tmp validation completed', tmpValidation);
+    if (!tmpValidation.ok) {
+      const failedTmpPath = `${this.databasePath}.invalid-tmp-${this.timestamp()}.sqlite`;
+      try {
+        renameSync(tmpPath, failedTmpPath);
+      } catch {
+        this.cleanupFile(tmpPath);
+      }
+      throw new LocalDatabaseError('DATABASE_WRITE_FAILED', `Temporary database validation failed: ${tmpValidation.reason}`, {
+        failedTmpPath,
+      });
+    }
+
+    this.safeReplaceDatabaseFromFile(tmpPath, 'persist', { sourceIsTemporary: true });
+    this.enforceBackupRetention();
+    this.logDatabaseEvent('persist completed', { size: this.safeSize(this.databasePath) });
+  }
+
+  validateDatabaseFile(filePath: string, options: { requireApplicationSchema: boolean }): ValidationResult {
+    const size = this.safeSize(filePath);
+    if (!existsSync(filePath)) return { ok: false, size, reason: 'file_missing' };
+    if (size <= 0) return { ok: false, size, reason: 'file_empty' };
+    if (!this.sql) return { ok: false, size, reason: 'sql_js_not_initialized' };
+
+    let candidate: Database | undefined;
+    try {
+      candidate = new this.sql.Database(readFileSync(filePath));
+      const integrity = candidate.exec('PRAGMA integrity_check;')?.[0]?.values?.[0]?.[0];
+      if (integrity !== 'ok') {
+        return { ok: false, size, reason: `integrity_check_failed:${String(integrity || 'empty')}` };
+      }
+      const tables = this.readTables(candidate);
+      if (options.requireApplicationSchema && !criticalTables.some((table) => tables.includes(table))) {
+        return { ok: false, size, reason: 'application_schema_missing' };
+      }
+      const missing = criticalTables.filter((table) => !tables.includes(table));
+      if (missing.length && tables.length) {
+        this.logDatabaseEvent('database schema compatibility warning', {
+          filePath,
+          missingTables: missing,
+          note: 'migration may add missing compatible tables',
+        });
+      }
+      return { ok: true, size, tables };
+    } catch (error) {
+      return { ok: false, size, reason: this.errorMessage(error) };
+    } finally {
+      candidate?.close();
+    }
   }
 
   private database() {
     if (!this.db) throw new Error('Local database has not been opened');
     return this.db;
+  }
+
+  private async recoverPrimaryDatabase(reason: string) {
+    this.logDatabaseEvent('corruption detected', { reason });
+    const corruptPath = this.preserveCorruptDatabase();
+    const backup = this.findNewestHealthyBackup();
+
+    if (!backup) {
+      const error = new LocalDatabaseError('DATABASE_BACKUP_NOT_FOUND', 'Primary database is corrupt and no healthy backup was found', {
+        corruptPath,
+      });
+      this.writeStartupError(error);
+      throw error;
+    }
+
+    try {
+      this.logDatabaseEvent('restore started', { backupPath: backup.path, backupCreatedAt: backup.createdAt, corruptPath });
+      this.safeReplaceDatabaseFromFile(backup.path, 'recovery');
+      const restoredValidation = this.validateDatabaseFile(this.databasePath, { requireApplicationSchema: true });
+      this.logDatabaseEvent('restored database validation completed', restoredValidation);
+      if (!restoredValidation.ok) {
+        throw new LocalDatabaseError('DATABASE_RESTORE_FAILED', `Restored database is invalid: ${restoredValidation.reason}`, {
+          backupPath: backup.path,
+          corruptPath,
+        });
+      }
+      this.db = new this.sql!.Database(readFileSync(this.databasePath));
+      this.writeRecoveryNotice({
+        code: 'DATABASE_RECOVERED_FROM_BACKUP',
+        message: "Ma'lumotlar bazasida muammo aniqlandi. Dastur eng so'nggi sog'lom zaxira nusxadan muvaffaqiyatli tiklandi.",
+        backupPath: backup.path,
+        backupCreatedAt: backup.createdAt,
+        corruptPath,
+      });
+      this.logDatabaseEvent('restore completed', { backupPath: backup.path });
+    } catch (error) {
+      const dbError =
+        error instanceof LocalDatabaseError
+          ? error
+          : new LocalDatabaseError('DATABASE_RESTORE_FAILED', 'Failed to restore database from backup', { corruptPath }, error);
+      this.writeStartupError(dbError);
+      throw dbError;
+    }
+  }
+
+  private preserveCorruptDatabase() {
+    const preservedPath = join(dirname(this.databasePath), `dinora-gullari.corrupt-${this.timestamp()}.sqlite`);
+    copyFileSync(this.databasePath, preservedPath);
+    this.logDatabaseEvent('corrupt database preserved', { preservedPath, size: this.safeSize(preservedPath) });
+    return preservedPath;
+  }
+
+  private findNewestHealthyBackup() {
+    mkdirSync(this.paths.backups, { recursive: true });
+    const files = readdirSync(this.paths.backups)
+      .filter((file) => file.toLowerCase().endsWith('.sqlite'))
+      .map((file) => {
+        const path = join(this.paths.backups, file);
+        const stats = statSync(path);
+        return { path, file, mtimeMs: stats.mtimeMs, createdAt: stats.mtime.toISOString() };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    this.logDatabaseEvent('backup scan started', { backupDir: this.paths.backups, count: files.length });
+    for (const backup of files) {
+      const validation = this.validateDatabaseFile(backup.path, { requireApplicationSchema: true });
+      if (validation.ok) {
+        this.logDatabaseEvent('healthy backup selected', { backupPath: backup.path, createdAt: backup.createdAt, size: validation.size });
+        return backup;
+      }
+      this.logDatabaseEvent('backup rejected', { backupPath: backup.path, reason: validation.reason, size: validation.size });
+    }
+    return null;
+  }
+
+  createVerifiedBackup(reason = 'manual') {
+    const validation = this.validateDatabaseFile(this.databasePath, { requireApplicationSchema: false });
+    if (!validation.ok) {
+      this.logDatabaseEvent('backup skipped because source database is not healthy', { reason, validation });
+      throw new LocalDatabaseError('DATABASE_CORRUPTED', `Cannot back up unhealthy database: ${validation.reason}`);
+    }
+
+    mkdirSync(this.paths.backups, { recursive: true });
+    const backupPath = join(this.paths.backups, `dinora-backup-${this.timestamp()}.sqlite`);
+    copyFileSync(this.databasePath, backupPath);
+    const backupValidation = this.validateDatabaseFile(backupPath, { requireApplicationSchema: false });
+    if (!backupValidation.ok) {
+      this.cleanupFile(backupPath);
+      throw new LocalDatabaseError('DATABASE_WRITE_FAILED', `Created backup failed validation: ${backupValidation.reason}`);
+    }
+    this.logDatabaseEvent('verified backup created', { reason, backupPath, size: backupValidation.size });
+    this.enforceBackupRetention();
+    return backupPath;
+  }
+
+  private safeReplaceDatabaseFromFile(sourcePath: string, reason: string, options: { sourceIsTemporary?: boolean } = {}) {
+    const oldPath = `${this.databasePath}.replace-old-${this.timestamp()}`;
+    const failedNewPath = `${this.databasePath}.replace-failed-${this.timestamp()}`;
+    let movedOld = false;
+    let installedNew = false;
+
+    try {
+      this.logDatabaseEvent('atomic replace started', { reason, sourcePath, databasePath: this.databasePath });
+      if (existsSync(this.databasePath)) {
+        renameSync(this.databasePath, oldPath);
+        movedOld = true;
+      }
+
+      if (options.sourceIsTemporary) {
+        renameSync(sourcePath, this.databasePath);
+      } else {
+        copyFileSync(sourcePath, `${this.databasePath}.restore-tmp`);
+        renameSync(`${this.databasePath}.restore-tmp`, this.databasePath);
+      }
+      installedNew = true;
+
+      const finalValidation = this.validateDatabaseFile(this.databasePath, { requireApplicationSchema: false });
+      if (!finalValidation.ok) {
+        throw new LocalDatabaseError('DATABASE_RESTORE_FAILED', `Installed database validation failed: ${finalValidation.reason}`);
+      }
+
+      if (movedOld) {
+        const safetyPath = `${this.databasePath}.previous-${this.timestamp()}`;
+        renameSync(oldPath, safetyPath);
+        this.logDatabaseEvent('previous database preserved after replace', { safetyPath });
+        this.cleanupPreviousDatabaseCopies();
+      }
+      this.logDatabaseEvent('atomic replace completed', { reason, size: finalValidation.size });
+    } catch (error) {
+      this.logDatabaseEvent('atomic replace failed; rollback started', { reason, error: this.errorMessage(error) });
+      if (installedNew && existsSync(this.databasePath)) {
+        try {
+          renameSync(this.databasePath, failedNewPath);
+        } catch {
+          // Keep going and attempt to put the old database back.
+        }
+      }
+      if (movedOld && existsSync(oldPath) && !existsSync(this.databasePath)) {
+        renameSync(oldPath, this.databasePath);
+      }
+      if (!options.sourceIsTemporary) {
+        this.cleanupFile(`${this.databasePath}.restore-tmp`);
+      }
+      throw error instanceof LocalDatabaseError
+        ? error
+        : new LocalDatabaseError('DATABASE_RESTORE_FAILED', 'Database replace failed', { reason }, error);
+    }
+  }
+
+  private recoverInterruptedReplace() {
+    if (existsSync(this.databasePath)) return;
+    const dir = dirname(this.databasePath);
+    const prefix = `${basename(this.databasePath)}.replace-old-`;
+    const candidates = readdirSync(dir)
+      .filter((file) => file.startsWith(prefix))
+      .map((file) => join(dir, file))
+      .sort((a, b) => this.safeMtimeMs(b) - this.safeMtimeMs(a));
+    const candidate = candidates.find((file) => this.validateDatabaseFile(file, { requireApplicationSchema: false }).ok);
+    if (!candidate) return;
+    copyFileSync(candidate, this.databasePath);
+    this.logDatabaseEvent('interrupted replace recovered from previous database', { candidate });
+  }
+
+  private writeFileFully(filePath: string, data: Buffer) {
+    const fd = openSync(filePath, 'w');
+    try {
+      writeFileSync(fd, data);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+  }
+
+  private readTables(database: Database) {
+    const rows = database.exec("SELECT name FROM sqlite_master WHERE type = 'table';")?.[0]?.values || [];
+    return rows.map((row) => String(row[0]));
+  }
+
+  private enforceBackupRetention() {
+    const files = readdirSync(this.paths.backups)
+      .filter((file) => file.toLowerCase().endsWith('.sqlite'))
+      .map((file) => join(this.paths.backups, file))
+      .sort((a, b) => this.safeMtimeMs(b) - this.safeMtimeMs(a));
+    const healthyKept = new Set(files.slice(0, backupRetentionLimit));
+    for (const file of files.slice(backupRetentionLimit)) {
+      if (healthyKept.has(file)) continue;
+      try {
+        unlinkSync(file);
+        this.logDatabaseEvent('old backup removed by retention', { file });
+      } catch (error) {
+        this.logDatabaseEvent('old backup retention cleanup failed', { file, error: this.errorMessage(error) });
+      }
+    }
+  }
+
+  private writeRecoveryNotice(payload: Record<string, unknown>) {
+    writeFileSync(this.recoveryNoticePath, JSON.stringify({ ...payload, createdAt: new Date().toISOString() }, null, 2), 'utf8');
+  }
+
+  private writeStartupError(error: LocalDatabaseError) {
+    writeFileSync(
+      this.startupErrorPath,
+      JSON.stringify(
+        {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          logPath: join(this.logsDir, 'database.log'),
+          createdAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+  }
+
+  private clearStartupError() {
+    this.cleanupFile(this.startupErrorPath);
+  }
+
+  private logDatabaseEvent(message: string, details: Record<string, unknown> = {}) {
+    mkdirSync(this.logsDir, { recursive: true });
+    const sanitized = { ...details };
+    for (const key of Object.keys(sanitized)) {
+      if (/password|token|secret|privatekey/i.test(key)) {
+        sanitized[key] = '[redacted]';
+      }
+    }
+    const line = `${new Date().toISOString()} ${message} ${JSON.stringify(sanitized)}\n`;
+    appendFileSync(join(this.logsDir, 'database.log'), line);
+    this.logger.log(message);
+  }
+
+  private safeSize(filePath: string) {
+    try {
+      return statSync(filePath).size;
+    } catch {
+      return 0;
+    }
+  }
+
+  private safeMtimeMs(filePath: string) {
+    try {
+      return statSync(filePath).mtimeMs;
+    } catch {
+      return 0;
+    }
+  }
+
+  private cleanupFile(filePath: string) {
+    try {
+      if (existsSync(filePath)) unlinkSync(filePath);
+    } catch {
+      // best effort cleanup
+    }
+  }
+
+  private timestamp() {
+    return new Date().toISOString().replace(/[:.]/g, '-');
+  }
+
+  private errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  private cleanupPreviousDatabaseCopies() {
+    const dir = dirname(this.databasePath);
+    const prefix = `${basename(this.databasePath)}.previous-`;
+    const files = readdirSync(dir)
+      .filter((file) => file.startsWith(prefix))
+      .map((file) => join(dir, file))
+      .sort((a, b) => this.safeMtimeMs(b) - this.safeMtimeMs(a));
+
+    for (const file of files.slice(5)) {
+      try {
+        unlinkSync(file);
+      } catch (error) {
+        this.logDatabaseEvent('previous database cleanup failed', { file, error: this.errorMessage(error) });
+      }
+    }
   }
 
   private deserializeRow(collection: string, row: Record<string, unknown>) {
